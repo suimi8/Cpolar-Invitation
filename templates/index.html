@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cpolar 批量注册工具 - 极简主义设计</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>Cpolar <span class="accent">Batch</span></h1>
+            <p class="subtitle">高效、稳定的自动化批量注册套件</p>
+        </header>
+
+        <main class="glass-card">
+            <div class="input-group">
+                <div class="field">
+                    <label for="inviteCode">邀请码</label>
+                    <input type="text" id="inviteCode" placeholder="输入邀请码..." value="K9K89">
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="count">注册数量</label>
+                        <input type="number" id="count" value="1" min="1" max="100">
+                    </div>
+                    <div class="field">
+                        <label for="threads">并发线程</label>
+                        <input type="number" id="threads" value="3" min="1" max="10">
+                    </div>
+                </div>
+                <button id="startBtn" class="primary-btn">开始批量注册</button>
+            </div>
+
+            <div class="status-panel" id="statusPanel" style="display: none;">
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span id="progressText">准备中...</span>
+                        <span id="percentage">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <label>已完成</label>
+                        <span id="completedNum">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>成功</label>
+                        <span id="successNum" class="success-text">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-container" id="logContainer">
+                <div class="log-header">
+                    <h3>实时日志</h3>
+                    <button id="clearLogs" class="text-btn">清空</button>
+                </div>
+                <div class="log-content" id="logContent">
+                    <div class="log-entry system">等待任务开始...</div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Cpolar Automation Suite • Power by Python & Flask</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
