@@ -139,38 +139,24 @@ class Database:
         finally:
             conn.close()
 
-    def get_all_accounts(self):
-        """获取所有账号"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT id, name, email, phone, password, invite_code, promo_code,
-                   plan_name, plan_start_time, plan_end_time, promotion_count, purchased_count, created_at
-            FROM accounts
-            ORDER BY created_at ASC
-        ''')
-
-        accounts = cursor.fetchall()
-        conn.close()
-        return accounts
+    # 注意: get_all_accounts 已移至文件末尾，避免重复定义
 
     def search_accounts(self, keyword):
-        """搜索账号（按邮箱、手机号或邀请码）"""
-        conn = sqlite3.connect(self.db_path)
+        """搜索账号（按邮箱、手机号或邀请码）- 安全版本，不返回密码"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT id, name, email, phone, password, invite_code, promo_code,
-                   plan_name, plan_start_time, plan_end_time, promotion_count, purchased_count, created_at
-            FROM accounts
-            WHERE email LIKE ? OR phone LIKE ? OR invite_code LIKE ? OR name LIKE ? OR promo_code LIKE ?
-            ORDER BY created_at ASC
-        ''', (f'%{keyword}%', f'%{keyword}%', f'%{keyword}%', f'%{keyword}%', f'%{keyword}%'))
-
-        accounts = cursor.fetchall()
-        conn.close()
-        return accounts
+        try:
+            # 安全加固：密码字段返回脱敏值
+            cursor.execute('''
+                SELECT id, name, email, phone, "********" as password, invite_code, promo_code,
+                       plan_name, plan_start_time, plan_end_time, promotion_count, purchased_count, created_at
+                FROM accounts
+                WHERE email LIKE ? OR phone LIKE ? OR invite_code LIKE ? OR name LIKE ? OR promo_code LIKE ?
+                ORDER BY created_at ASC
+            ''', (f'%{keyword}%', f'%{keyword}%', f'%{keyword}%', f'%{keyword}%', f'%{keyword}%'))
+            return cursor.fetchall()
+        finally:
+            conn.close()
 
     def delete_account(self, account_id):
         """删除账号"""
@@ -218,20 +204,20 @@ class Database:
             conn.close()
 
     def get_account_by_id(self, account_id):
-        """根据ID获取账号信息"""
-        conn = sqlite3.connect(self.db_path)
+        """根据ID获取账号信息 - 安全版本，不返回明文密码"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT id, name, email, phone, password, invite_code, promo_code,
-                   plan_name, plan_start_time, plan_end_time, promotion_count, purchased_count, created_at
-            FROM accounts
-            WHERE id = ?
-        ''', (account_id,))
-
-        account = cursor.fetchone()
-        conn.close()
-        return account
+        try:
+            # 安全加固：密码字段返回脱敏值
+            cursor.execute('''
+                SELECT id, name, email, phone, "********" as password, invite_code, promo_code,
+                       plan_name, plan_start_time, plan_end_time, promotion_count, purchased_count, created_at
+                FROM accounts
+                WHERE id = ?
+            ''', (account_id,))
+            return cursor.fetchone()
+        finally:
+            conn.close()
 
     def update_account_info(self, account_id, plan_name=None, plan_start_time=None,
                            plan_end_time=None, promotion_count=None, purchased_count=None):

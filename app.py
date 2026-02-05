@@ -55,11 +55,35 @@ RATE_LIMIT_STORAGE = {}
 RATE_LIMIT_LOCK = threading.Lock()
 LOGIN_FAILED_ATTEMPTS = {} # {ip: count}
 
+# ========== 外部服务 URL 配置 (可通过环境变量覆盖) ==========
+CPOLAR_LOGIN_URL = os.environ.get("CPOLAR_LOGIN_URL", "https://dashboard.cpolar.com/login")
+CPOLAR_ENVOY_URL = os.environ.get("CPOLAR_ENVOY_URL", "https://dashboard.cpolar.com/envoy")
+
+# ========== 可信代理 IP 列表 (仅信任来自这些代理的 X-Forwarded-For) ==========
+# 生产环境应配置为 Zeabur/Nginx 等真实代理 IP 或 CIDR
+TRUSTED_PROXIES = set(
+    filter(None, os.environ.get("TRUSTED_PROXIES", "127.0.0.1,::1").split(","))
+)
+
 def get_real_ip():
-    """获取真实 IP 地址（兼容代理/负载均衡）"""
-    if request.headers.getlist("X-Forwarded-For"):
-        return request.headers.getlist("X-Forwarded-For")[0]
-    return request.remote_addr
+    """
+    安全获取真实 IP 地址
+    仅当请求直接来自可信代理时才信任 X-Forwarded-For
+    """
+    # 获取直连 IP (来自 WSGI 的 remote_addr)
+    direct_ip = request.remote_addr
+    
+    # 只有来自可信代理的请求，才读取 X-Forwarded-For
+    if direct_ip in TRUSTED_PROXIES:
+        xff = request.headers.get("X-Forwarded-For", "")
+        if xff:
+            # 取第一个客户端 IP (最左侧)
+            client_ip = xff.split(",")[0].strip()
+            # 基本格式验证：防止恶意注入
+            if re.match(r'^[\d.:a-fA-F]+$', client_ip):
+                return client_ip
+    
+    return direct_ip
 
 def check_rate_limit(ip, endpoint, limit=5, window=60):
     """
@@ -393,17 +417,25 @@ def delete_cdkey(cdkey_id):
 def get_cpolar_promo():
     """自动化获取 Cpolar 推广码"""
     data = request.json or {}
-    email = data.get('email')
-    password = data.get('password')
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
     
     if not email or not password:
         return jsonify({"success": False, "message": "请输入 Cpolar 账号和密码"})
+    
+    # 输入验证：邮箱格式
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        return jsonify({"success": False, "message": "邮箱格式不正确"})
+    
+    # 输入验证：密码长度限制 (Cpolar 最小6位)
+    if len(password) < 6 or len(password) > 128:
+        return jsonify({"success": False, "message": "密码长度应在 6-128 字符之间"})
     
     # 每次请求创建独立的 Session，确保并发时的会话隔离
     session = requests.Session()
     try:
         # 1. 获取登录页面提取 CSRF Token
-        login_res = session.get("https://dashboard.cpolar.com/login", timeout=10)
+        login_res = session.get(CPOLAR_LOGIN_URL, timeout=10)
         soup = BeautifulSoup(login_res.text, 'html.parser')
         csrf_input = soup.find('input', {'name': 'csrf_token'})
         if not csrf_input:
@@ -418,19 +450,19 @@ def get_cpolar_promo():
             "csrf_token": csrf_token
         }
         headers = {
-            "Referer": "https://dashboard.cpolar.com/login",
+            "Referer": CPOLAR_LOGIN_URL,
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         
         # 禁用重定向以检查是否登录成功 (302) 或 留在登录页 (200)
-        response = session.post("https://dashboard.cpolar.com/login", data=payload, headers=headers, timeout=15, allow_redirects=True)
+        response = session.post(CPOLAR_LOGIN_URL, data=payload, headers=headers, timeout=15, allow_redirects=True)
         
         # 如果还在登录页，说明密码错
         if "login" in response.url and response.status_code == 200:
             return jsonify({"success": False, "message": "Cpolar 登录失败：账号或密码错误"})
             
         # 3. 访问推广页获取代码
-        envoy_res = session.get("https://dashboard.cpolar.com/envoy", timeout=10)
+        envoy_res = session.get(CPOLAR_ENVOY_URL, timeout=10)
         
         # 使用正则提取 i.cpolar.com/m/XXXX
         match = re.search(r'i\.cpolar\.com/m/([A-Z0-9]+)', envoy_res.text)

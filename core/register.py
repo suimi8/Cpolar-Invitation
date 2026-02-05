@@ -1,10 +1,14 @@
 import requests
 import re
+import os
 import traceback
 from urllib.parse import quote
 from database.logger import ErrorLogger
 from utils.generators import (generate_random_name, generate_random_email, 
                                generate_random_phone, generate_random_password)
+
+# ========== 外部服务 URL 配置 (可通过环境变量覆盖) ==========
+CPOLAR_SIGNUP_URL = os.environ.get("CPOLAR_SIGNUP_URL", "https://dashboard.cpolar.com/signup")
 
 
 class CpolarRegister:
@@ -33,7 +37,7 @@ class CpolarRegister:
             error_msg = f"非法邀请码格式: {invite_code}"
             return None, error_msg
 
-        url = f"https://dashboard.cpolar.com/signup?channel=0&inviteCode={quote(invite_code)}"
+        url = f"{CPOLAR_SIGNUP_URL}?channel=0&inviteCode={quote(invite_code)}"
         
         try:
             response = self.session.get(url, headers=self.headers, timeout=30)
@@ -78,13 +82,13 @@ class CpolarRegister:
         phone = generate_random_phone()
         password = generate_random_password()
 
-        register_url = "https://dashboard.cpolar.com/signup"
+        register_url = CPOLAR_SIGNUP_URL
         post_headers = self.headers.copy()
         post_headers.update({
             "cache-control": "max-age=0",
             "content-type": "application/x-www-form-urlencoded",
             "sec-fetch-site": "same-origin",
-            "Referer": "https://dashboard.cpolar.com/signup"
+            "Referer": CPOLAR_SIGNUP_URL
         })
 
         post_data = f"name={name}&email={quote(email)}&phone={phone}&password={quote(password)}&inviteNumber=&csrf_token={quote(csrf_token)}&agreeTerms=1"

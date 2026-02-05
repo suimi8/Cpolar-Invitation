@@ -1,8 +1,14 @@
 import requests
 import re
+import os
 import traceback
 from bs4 import BeautifulSoup
 from database.logger import ErrorLogger
+
+# ========== 外部服务 URL 配置 (可通过环境变量覆盖) ==========
+CPOLAR_LOGIN_URL = os.environ.get("CPOLAR_LOGIN_URL", "https://dashboard.cpolar.com/login")
+CPOLAR_ENVOY_URL = os.environ.get("CPOLAR_ENVOY_URL", "https://dashboard.cpolar.com/envoy")
+CPOLAR_BILLING_URL = os.environ.get("CPOLAR_BILLING_URL", "https://dashboard.cpolar.com/billing")
 
 
 class CpolarLogin:
@@ -19,7 +25,7 @@ class CpolarLogin:
     def get_csrf_token(self):
         """获取CSRF Token"""
         try:
-            response = self.session.get("https://dashboard.cpolar.com/login", timeout=30)
+            response = self.session.get(CPOLAR_LOGIN_URL, timeout=30)
             if response.status_code == 200:
                 match = re.search(r'name="csrf_token"\s+value="([^"]+)"', response.text)
                 if match:
@@ -66,7 +72,7 @@ class CpolarLogin:
                 )
                 return False, error_msg
 
-            login_url = "https://dashboard.cpolar.com/login"
+            login_url = CPOLAR_LOGIN_URL
             data = {
                 "login": email,
                 "password": password,
@@ -75,7 +81,7 @@ class CpolarLogin:
 
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Referer": "https://dashboard.cpolar.com/login",
+                "Referer": CPOLAR_LOGIN_URL,
                 "Origin": "https://dashboard.cpolar.com"
             }
 
@@ -147,7 +153,7 @@ class CpolarLogin:
         """
         try:
             # 访问推广页面
-            response = self.session.get("https://dashboard.cpolar.com/envoy")
+            response = self.session.get(CPOLAR_ENVOY_URL)
 
             if response.status_code == 200:
                 # 使用正则表达式提取推广码
@@ -187,7 +193,7 @@ class CpolarLogin:
         返回: (套餐信息字典, 错误信息)
         """
         try:
-            response = self.session.get("https://dashboard.cpolar.com/billing")
+            response = self.session.get(CPOLAR_BILLING_URL)
 
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -233,7 +239,7 @@ class CpolarLogin:
         返回: (统计信息字典, 错误信息)
         """
         try:
-            response = self.session.get("https://dashboard.cpolar.com/envoy")
+            response = self.session.get(CPOLAR_ENVOY_URL)
 
             if response.status_code == 200:
                 # 查找推广客户数
