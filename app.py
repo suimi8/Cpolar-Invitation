@@ -110,40 +110,14 @@ def register_single_task(index, invite_code):
         }
 
 
-from core.order_verifier import OrderVerifier
-
-# ... (之前的代码)
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # 方式1：管理员密码登录 (保留作为后门/管理用)
         password = request.form.get('password')
         if password and password == SITE_PASSWORD:
             session['logged_in'] = True
-            session['is_admin'] = True # 标记为管理员
             return redirect(url_for('index'))
-            
-        # 方式2：订单号验证登录
-        order_id = request.form.get('order_id')
-        if order_id:
-            verifier = OrderVerifier(DB_PATH)
-            is_valid, msg, order_info = verifier.check_order(order_id)
-            
-            if is_valid:
-                # 记录已使用
-                verifier.mark_order_used(order_id, request.remote_addr)
-                
-                session['logged_in'] = True
-                session['is_admin'] = False
-                session['order_id'] = order_id
-                # 可以把商品名存入session展示
-                session['product_name'] = order_info.get('name', 'Cpolar服务')
-                return redirect(url_for('index'))
-            else:
-                return render_template('login.html', error=msg)
-                
-        return render_template('login.html', error="请输入订单号或管理员密码")
+        return render_template('login.html', error="密码错误，请重试")
         
     return render_template('login.html')
 

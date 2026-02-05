@@ -27,23 +27,9 @@
         <main class="glass-card login-card">
             <form id="loginForm" method="POST" action="/login">
                 <div class="field">
-                    <label for="order_id">订单号 / 访问密码</label>
-                    <input type="text" id="order_id" name="order_id" placeholder="请输入订单号 (或管理员密码填入此框)..." autofocus>
-                    <!-- 保留密码字段以便兼容旧的管理员登录习惯，或者直接统一用一个输入框在后端判断 -->
-                    <input type="hidden" name="password" id="hidden_password">
+                    <label for="password">访问密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码..." autofocus>
                 </div>
-
-                <script>
-                    // 简单的脚本：将输入的值同时赋给 order_id 和 password (如果像是密码的话)
-                    // 或者更简单：修改后端只读一个字段。但为了最小化改动，我们在提交前处理
-                    document.getElementById('loginForm').addEventListener('submit', function (e) {
-                        const inputVal = document.getElementById('order_id').value;
-                        // 简单的启发式：如果包含字母且长度较短可能是密码，如果是纯数字长串可能是订单号
-                        // 但为了保险，我们让后端都尝试一下。
-                        // 这里我们把值复制给 password 字段，这样后端 request.form.get('password') 也能拿到值
-                        document.getElementById('hidden_password').value = inputVal;
-                    });
-                </script>
 
                 {% if error %}
                 <div class="error-message">
@@ -51,7 +37,7 @@
                 </div>
                 {% endif %}
 
-                <button type="submit" class="primary-btn">验证身份</button>
+                <button type="submit" class="primary-btn">登录</button>
             </form>
         </main>
 
