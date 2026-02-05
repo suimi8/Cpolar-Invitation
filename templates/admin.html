@@ -200,6 +200,8 @@
                 <label>长度:</label>
                 <input type="number" id="generateLength" value="16" min="8" max="32">
                 <button class="primary-btn" onclick="generateCdkeys()">生成卡密</button>
+                <button class="primary-btn" onclick="exportCdkeys()"
+                    style="background-color: var(--success);">导出TXT</button>
                 <button class="secondary-btn" onclick="loadCdkeys()">刷新</button>
             </div>
 
@@ -322,6 +324,17 @@
             } catch (error) {
                 console.error('生成卡密失败:', error);
                 showToast('生成失败');
+            }
+
+            // 导出未使用的卡密
+            async function exportCdkeys() {
+                try {
+                    // 打开新窗口直接下载
+                    window.open('/api/cdkeys/export', '_blank');
+                } catch (error) {
+                    console.error('导出失败:', error);
+                    showToast('导出失败');
+                }
             }
         }
 

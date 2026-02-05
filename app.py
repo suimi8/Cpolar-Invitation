@@ -167,20 +167,17 @@ def register_single_task(index, invite_code):
             if promo_code:
                 account_info['promo_code'] = promo_code
             
-            # 保存到数据库
-            try:
-                db = Database(DB_PATH)
-                db.add_account(account_info)
-            except Exception as e:
-                print(f"数据库保存失败: {e}")
-
+            # 不在线程中直接写库，而是返回数据给主线程处理
+            # 避免 SQLite 锁问题
+            
             return {
                 "status": "success",
                 "index": index + 1,
                 "email": account_info['email'],
                 "password": account_info['password'],
                 "promo_code": account_info.get('promo_code', '获取失败'),
-                "message": "注册成功"
+                "message": "注册成功",
+                "account_data": account_info # 传递完整数据以便保存
             }
         else:
             return {
@@ -350,8 +347,20 @@ def batch_register():
                 try:
                     result = future.result()
                     completed += 1
+                    
                     if result['status'] == 'success':
                         success_count += 1
+                        # 【改进】在主线程中统一写入数据库，提升并发性能并避免 SQLite 锁
+                        try:
+                            account_data = result.get('account_data')
+                            if account_data:
+                                db_writer = Database(DB_PATH)
+                                db_writer.add_account(account_data)
+                                # 移除 raw data 以免传给前端太大
+                                del result['account_data']
+                        except Exception as e:
+                            print(f"数据库记录失败: {e}")
+                            result['message'] += " (未保存到库)"
                     
                     yield 'data: ' + json.dumps({
                         "type": "progress", 
@@ -376,6 +385,25 @@ def batch_register():
                     }) + '\n\n'
         
         yield 'data: ' + json.dumps({"type": "finished", "total": count, "success": success_count}) + '\n\n'
+
+@app.route('/api/cdkeys/export', methods=['GET'])
+@admin_required
+def export_cdkeys():
+    """导出未使用的卡密"""
+    db = Database(DB_PATH)
+    cdkeys = db.get_all_cdkeys()
+    
+    # 筛选未使用的
+    unused_codes = [row[1] for row in cdkeys if not row[2]]
+    
+    # 每行一个
+    content = "\n".join(unused_codes)
+    
+    return Response(
+        content,
+        mimetype="text/plain",
+        headers={"Content-Disposition": "attachment;filename=unused_cdkeys.txt"}
+    )
 
     headers = {
         'X-Accel-Buffering': 'no',  # 告诉 Nginx 不要缓冲
