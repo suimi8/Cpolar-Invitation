@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - Cpolar 批量注册工具</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    
+    <div class="container login-container">
+        <header>
+            <h1>Cpolar <span class="accent">Login</span></h1>
+            <p class="subtitle">请输入访问密码以继续</p>
+        </header>
+
+        <main class="glass-card login-card">
+            <form id="loginForm" method="POST" action="/login">
+                <div class="field">
+                    <label for="password">访问密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码..." required autofocus>
+                </div>
+                
+                {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <button type="submit" class="primary-btn">验证身份</button>
+            </form>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Cpolar Automation Suite</p>
+        </footer>
+    </div>
+</body>
+</html>

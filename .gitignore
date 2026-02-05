@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.db
+cpolar_accounts.db
+cpolar_errors.db
+.env
+.DS_Store

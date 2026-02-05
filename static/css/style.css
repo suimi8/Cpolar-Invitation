@@ -305,3 +305,52 @@ footer {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Login & Header Styles */
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 3rem;
+}
+
+.header-text {
+    text-align: left;
+}
+
+.logout-btn {
+    text-decoration: none;
+    color: var(--text-dim);
+    border: 1px solid var(--glass-border);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    background: rgba(0,0,0,0.2);
+}
+
+.logout-btn:hover {
+    color: white;
+    background: var(--error);
+    border-color: var(--error);
+}
+
+.login-container {
+    max-width: 450px;
+}
+
+.login-card {
+    padding: 3rem;
+}
+
+.error-message {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    padding: 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-size: 0.9rem;
+    text-align: center;
+}

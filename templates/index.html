@@ -1,23 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cpolar 批量注册工具 - 极简主义设计</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <div class="background-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
     </div>
-    
+
     <div class="container">
         <header>
-            <h1>Cpolar <span class="accent">Batch</span></h1>
-            <p class="subtitle">高效、稳定的自动化批量注册套件</p>
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>Cpolar <span class="accent">Batch</span></h1>
+                    <p class="subtitle">高效、稳定的自动化批量注册套件</p>
+                </div>
+                <a href="/logout" class="logout-btn">退出登录</a>
+            </div>
         </header>
 
         <main class="glass-card">
@@ -29,11 +38,11 @@
                 <div class="field-row">
                     <div class="field">
                         <label for="count">注册数量</label>
-                        <input type="number" id="count" value="1" min="1" max="100">
+                        <input type="number" id="count" value="1" min="1" max="50">
                     </div>
                     <div class="field">
                         <label for="threads">并发线程</label>
-                        <input type="number" id="threads" value="3" min="1" max="10">
+                        <input type="number" id="threads" value="3" min="1" max="8">
                     </div>
                 </div>
                 <button id="startBtn" class="primary-btn">开始批量注册</button>
@@ -79,4 +88,5 @@
 
     <script src="/static/js/main.js"></script>
 </body>
+
 </html>
