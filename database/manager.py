@@ -46,6 +46,16 @@ class Database:
                     created_at TEXT NOT NULL
                 )
             ''')
+            
+            # IP封禁表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS banned_ips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip_address TEXT NOT NULL UNIQUE,
+                    reason TEXT,
+                    banned_at TEXT NOT NULL
+                )
+            ''')
 
             cursor.execute("PRAGMA table_info(accounts)")
             columns = [column[1] for column in cursor.fetchall()]
@@ -388,5 +398,77 @@ class Database:
             return count
         except Exception:
             return 0
+        finally:
+            conn.close()
+
+    def clear_all_cdkeys(self):
+        """清空所有卡密"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('DELETE FROM cdkeys')
+            conn.commit()
+            return cursor.rowcount
+        except Exception:
+            return 0
+        finally:
+            conn.close()
+
+    def ban_ip(self, ip, reason="Multiple failed login attempts"):
+        """封禁IP"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at)
+                VALUES (?, ?, ?)
+            ''', (ip, reason, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            conn.commit()
+            return True
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+    def unban_ip(self, ip):
+        """解封IP"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('DELETE FROM banned_ips WHERE ip_address = ?', (ip,))
+            conn.commit()
+            return True
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+    def is_ip_banned(self, ip):
+        """检查IP是否被封禁"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT 1 FROM banned_ips WHERE ip_address = ?', (ip,))
+            return cursor.fetchone() is not None
+        finally:
+            conn.close()
+
+    def get_banned_ips(self):
+        """获取所有封禁IP"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT ip_address, reason, banned_at FROM banned_ips ORDER BY banned_at DESC')
+            return cursor.fetchall()
+        finally:
+            conn.close()
+
+    def get_all_accounts(self):
+        """获取所有账号（含推广码）"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT id, email, password, promo_code, created_at FROM accounts ORDER BY created_at DESC')
+            return cursor.fetchall()
         finally:
             conn.close()

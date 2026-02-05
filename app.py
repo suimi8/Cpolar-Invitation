@@ -50,6 +50,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # 格式: {ip: [timestamp1, timestamp2, ...]}
 RATE_LIMIT_STORAGE = {}
 RATE_LIMIT_LOCK = threading.Lock()
+LOGIN_FAILED_ATTEMPTS = {} # {ip: count}
 
 def get_real_ip():
     """获取真实 IP 地址（兼容代理/负载均衡）"""
@@ -205,26 +206,42 @@ def register_single_task(index, invite_code):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # 速率限制：防止暴力破解 (每分钟5次)
-        # 修复：使用真实IP（兼容代理）
         ip = get_real_ip()
+        db = Database(DB_PATH)
+        
+        # 0. 检查IP是否被封禁
+        if db.is_ip_banned(ip):
+            return render_template('login.html', error="您的IP因多次登录失败已被封禁，请联系管理员解除。"), 403
+
+        # 1. 速率限制：防止暴力破解 (每分钟5次请求)
         if not check_rate_limit(ip, limit=5, window=60):
-            return render_template('login.html', error="尝试次数过多，请1分钟后再试"), 429
+            return render_template('login.html', error="请求过于频繁，请1分钟后再试"), 429
 
         password = request.form.get('password')
         
-        # 验证密码
+        # 2. 验证密码
         if password == ADMIN_PASSWORD:
+            if ip in LOGIN_FAILED_ATTEMPTS: del LOGIN_FAILED_ATTEMPTS[ip]
             session['logged_in'] = True
             session['is_admin'] = True  # 管理员权限
             return redirect(url_for('index'))
             
         elif password == SITE_PASSWORD:
+            if ip in LOGIN_FAILED_ATTEMPTS: del LOGIN_FAILED_ATTEMPTS[ip]
             session['logged_in'] = True
             session['is_admin'] = False # 普通用户
             return redirect(url_for('index'))
             
-        return render_template('login.html', error="密码错误，请重试")
+        else:
+            # 3. 密码错误处理
+            count = LOGIN_FAILED_ATTEMPTS.get(ip, 0) + 1
+            LOGIN_FAILED_ATTEMPTS[ip] = count
+            
+            if count >= 3:
+                db.ban_ip(ip, reason="连续3次输入错误密码")
+                return render_template('login.html', error="连续3次密码错误，您的IP已被封禁。"), 403
+            
+            return render_template('login.html', error=f"密码错误，剩余尝试次数: {3 - count}")
         
     return render_template('login.html')
 
@@ -298,6 +315,79 @@ def cleanup_cdkeys():
     except Exception as e:
         print(f"清理失败: {e}")
         return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/cdkeys/cleanup_all', methods=['POST'])
+@admin_required
+def cleanup_all_cdkeys():
+    """清空所有卡密"""
+    db = Database(DB_PATH)
+    try:
+        count = db.clear_all_cdkeys()
+        return jsonify({"success": True, "count": count})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/accounts', methods=['GET'])
+@admin_required
+def get_accounts():
+    """获取所有注册账号"""
+    db = Database(DB_PATH)
+    accounts = db.get_all_accounts()
+    return jsonify({
+        "accounts": [
+            {
+                "id": row[0],
+                "email": row[1],
+                "password": row[2],
+                "promo_code": row[3],
+                "created_at": row[4]
+            } for row in accounts
+        ]
+    })
+
+@app.route('/api/bans', methods=['GET'])
+@admin_required
+def get_bans():
+    """获取所有封禁IP"""
+    db = Database(DB_PATH)
+    bans = db.get_banned_ips()
+    return jsonify({
+        "bans": [
+            {
+                "ip": row[0],
+                "reason": row[1],
+                "banned_at": row[2]
+            } for row in bans
+        ]
+    })
+
+@app.route('/api/bans/unban', methods=['POST'])
+@admin_required
+def unban_ip_route():
+    data = request.json or {}
+    ip = data.get('ip')
+    if not ip: return jsonify({"success": False, "message": "IP required"})
+    
+    db = Database(DB_PATH)
+    if db.unban_ip(ip):
+        # 也要从内存计数器中移除，以防立刻又被封
+        if ip in LOGIN_FAILED_ATTEMPTS: del LOGIN_FAILED_ATTEMPTS[ip]
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Failed"})
+
+@app.route('/api/bans/ban', methods=['POST'])
+@admin_required
+def ban_ip_route():
+    data = request.json or {}
+    ip = data.get('ip')
+    reason = data.get('reason', 'Manual ban')
+    
+    if not ip: return jsonify({"success": False, "message": "IP required"})
+    
+    db = Database(DB_PATH)
+    if db.ban_ip(ip, reason):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Failed"})
 
 @app.route('/api/cdkeys/<int:cdkey_id>', methods=['DELETE'])
 @admin_required
@@ -416,6 +506,13 @@ def batch_register():
         
         yield 'data: ' + json.dumps({"type": "finished", "total": count, "success": success_count}) + '\n\n'
 
+    headers = {
+        'X-Accel-Buffering': 'no',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    }
+    return Response(stream_with_context(generate()), mimetype='text/event-stream', headers=headers)
+
 @app.route('/api/cdkeys/export', methods=['GET'])
 @admin_required
 def export_cdkeys():
@@ -434,13 +531,6 @@ def export_cdkeys():
         mimetype="text/plain",
         headers={"Content-Disposition": "attachment;filename=unused_cdkeys.txt"}
     )
-
-    headers = {
-        'X-Accel-Buffering': 'no',  # 告诉 Nginx 不要缓冲
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-    }
-    return Response(stream_with_context(generate()), mimetype='text/event-stream', headers=headers)
 
 if __name__ == '__main__':
     # 确保数据库文件所在目录存在

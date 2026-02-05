@@ -9,7 +9,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
         rel="stylesheet">
-    <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <style>
         .page-header {
@@ -32,6 +31,66 @@
 
         .header-right a:hover {
             color: var(--primary);
+        }
+
+        /* Tabs Styling */
+        .tab-nav {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.8rem 1.2rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.4rem;
+            color: var(--text-main);
         }
 
         .toast {
@@ -58,7 +117,11 @@
             border-radius: 6px;
             cursor: pointer;
             border: none;
-            margin-right: 0.5rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-small:hover {
+            opacity: 0.8;
         }
 
         .btn-copy {
@@ -66,28 +129,46 @@
             color: #0284c7;
         }
 
-        .btn-copy:hover {
-            background: #bae6fd;
-        }
-
         .btn-danger {
             background: #fee2e2;
             color: #ef4444;
         }
 
-        .btn-danger:hover {
-            background: #fecaca;
+        .btn-warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .sub-header {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 0.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Responsive Table adjustments */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .cdkey-table {
+            min-width: 900px;
         }
     </style>
 </head>
 
 <body>
-    <!-- 使用宽容器 -->
     <div class="container container-wide">
         <header class="page-header">
             <div class="header-left">
                 <h1>Cpolar <span class="accent">Admin</span></h1>
-                <p class="subtitle">管理验证卡密与系统状态</p>
+                <p class="subtitle">系统管理与安全监控中心</p>
             </div>
             <div class="header-right">
                 <a href="/">← 返回首页</a>
@@ -95,45 +176,115 @@
             </div>
         </header>
 
-        <main class="glass-card" style="padding: 2rem;">
-            <!-- 统计信息 -->
-            <div class="stats-row">
-                <div class="stat-card">
-                    <div class="number" id="statTotal">0</div>
-                    <div class="label">总数</div>
+        <nav class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('tab-cdkeys')">卡密管理</button>
+            <button class="tab-btn" onclick="switchTab('tab-users')">注册用户</button>
+            <button class="tab-btn" onclick="switchTab('tab-security')">安全中心</button>
+        </nav>
+
+        <main class="glass-card" style="padding: 2rem; min-height: 500px;">
+            <!-- Tab 1: 卡密管理 -->
+            <div id="tab-cdkeys" class="tab-content active">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="number" id="statTotal">0</div>
+                        <div class="label">总数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number" id="statUnused" style="color: var(--success);">0</div>
+                        <div class="label">未使用</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number" id="statUsed" style="color: var(--error);">0</div>
+                        <div class="label">已使用</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="number" id="statUnused" style="color: var(--success);">0</div>
-                    <div class="label">未使用</div>
+
+                <div class="section-header">
+                    <h2>卡密控制</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="primary-btn" onclick="exportCdkeys()"
+                            style="width: auto; background-color: var(--success);">导出TXT</button>
+                        <button class="primary-btn" onclick="cleanupCdkeys()"
+                            style="width: auto; background-color: #f97316;">清理已用</button>
+                        <button class="primary-btn" onclick="clearAllCdkeys()"
+                            style="width: auto; background-color: var(--error);">一键清空</button>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="number" id="statUsed" style="color: var(--error);">0</div>
-                    <div class="label">已使用</div>
+
+                <div class="cdkey-controls"
+                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label>生成数量:</label>
+                            <input type="number" id="generateCount" value="10" min="1" max="100" style="width: 80px;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label>卡密长度:</label>
+                            <input type="number" id="generateLength" value="16" min="8" max="32" style="width: 80px;">
+                        </div>
+                        <button class="primary-btn" onclick="generateCdkeys()"
+                            style="width: auto; padding-left: 2rem; padding-right: 2rem;">生成新卡密</button>
+                        <button class="secondary-btn" onclick="loadCdkeys()" style="width: auto;">刷新列表</button>
+                    </div>
+                </div>
+
+                <div class="sub-header">未使用卡密 (Unused)</div>
+                <div class="table-container">
+                    <div id="cdkeyListUnused">
+                        <div style="padding: 2rem; text-align: center; color: var(--text-dim);">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="sub-header">已使用卡密 (Used)</div>
+                <div class="table-container">
+                    <div id="cdkeyListUsed">
+                        <div style="padding: 2rem; text-align: center; color: var(--text-dim);">加载中...</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 生成控制 -->
-            <div class="cdkey-controls">
-                <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem;">
-                    <label>生成数量:</label>
-                    <input type="number" id="generateCount" value="10" min="1" max="100">
-                    <label style="margin-left: 1rem;">长度:</label>
-                    <input type="number" id="generateLength" value="16" min="8" max="32">
+            <!-- Tab 2: 注册用户 -->
+            <div id="tab-users" class="tab-content">
+                <div class="section-header">
+                    <h2>已注册用户列表</h2>
+                    <button class="secondary-btn" onclick="loadAccounts()" style="width: auto;">刷新用户</button>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="primary-btn" onclick="generateCdkeys()" style="width: auto;">生成卡密</button>
-                    <button class="primary-btn" onclick="exportCdkeys()"
-                        style="width: auto; background-color: var(--success);">导出TXT</button>
-                    <button class="primary-btn" onclick="cleanupCdkeys()"
-                        style="width: auto; background-color: var(--error);">清理已用</button>
-                    <button class="secondary-btn" onclick="loadCdkeys()" style="width: auto;">刷新</button>
+                <div class="table-container">
+                    <div id="accountList">
+                        <div style="padding: 3rem; text-align: center; color: var(--text-dim);">正在加载账号记录...</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 卡密列表 (带滚动条) -->
-            <div class="table-container">
-                <div id="cdkeyList">
-                    <div style="padding: 3rem; text-align: center; color: var(--text-dim);">加载中...</div>
+            <!-- Tab 3: 安全中心 -->
+            <div id="tab-security" class="tab-content">
+                <div class="section-header">
+                    <h2>IP 访问控制 / 封禁管理</h2>
+                    <button class="secondary-btn" onclick="loadBans()" style="width: auto;">刷新封禁列表</button>
+                </div>
+
+                <div
+                    style="background: #fffafa; border: 1px solid #fee2e2; border-radius: 12px; padding: 1.2rem; margin-bottom: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label>手动封禁 IP:</label>
+                            <input type="text" id="banIpInput" placeholder="输入 IP 地址..." style="width: 200px;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label>原因:</label>
+                            <input type="text" id="banReasonInput" value="管理员手动封禁" style="width: 200px;">
+                        </div>
+                        <button class="primary-btn" onclick="manualBan()"
+                            style="width: auto; background-color: var(--error);">封禁 IP</button>
+                    </div>
+                </div>
+
+                <div class="sub-header">当前生效的封禁列表</div>
+                <div class="table-container">
+                    <div id="banList">
+                        <div style="padding: 3rem; text-align: center; color: var(--text-dim);">正在加载封禁记录...</div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -145,39 +296,163 @@
 
     <div class="toast" id="toast"></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="/static/js/background.js"></script>
     <script>
-        // 显示提示
-        function showToast(message, duration = 2000) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), duration);
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+
+            // Refresh data based on tab
+            if (tabId === 'tab-cdkeys') loadCdkeys();
+            if (tabId === 'tab-users') loadAccounts();
+            if (tabId === 'tab-security') loadBans();
         }
 
-        // 复制到剪贴板
-        function copyCode(code) {
-            navigator.clipboard.writeText(code).then(() => {
-                showToast('已复制: ' + code);
+        // Toast helper
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = isError ? 'var(--error)' : 'var(--success)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板');
             });
         }
 
-        // 加载卡密列表
+        // --- CDKey Management ---
         async function loadCdkeys() {
             try {
                 const response = await fetch('/api/cdkeys');
                 const data = await response.json();
 
-                // 更新统计
                 document.getElementById('statTotal').textContent = data.stats.total;
                 document.getElementById('statUnused').textContent = data.stats.unused;
                 document.getElementById('statUsed').textContent = data.stats.used;
 
-                // 渲染表格
-                const container = document.getElementById('cdkeyList');
+                const unusedList = data.cdkeys.filter(k => !k.is_used);
+                const usedList = data.cdkeys.filter(k => k.is_used);
 
-                if (data.cdkeys.length === 0) {
-                    container.innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-dim);">暂无卡密，请点击"生成卡密"创建</div>';
+                renderCdkeyTable('cdkeyListUnused', unusedList);
+                renderCdkeyTable('cdkeyListUsed', usedList);
+
+            } catch (err) {
+                console.error(err);
+                showToast('加载卡密失败', true);
+            }
+        }
+
+        function renderCdkeyTable(elementId, items) {
+            const container = document.getElementById(elementId);
+            if (items.length === 0) {
+                container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-dim);">暂无数据</div>';
+                return;
+            }
+
+            let html = `
+                <table class="cdkey-table">
+                    <thead>
+                        <tr>
+                            <th>卡密</th>
+                            <th>状态</th>
+                            <th>使用 IP / 时间</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            items.forEach(item => {
+                const statusHtml = item.is_used
+                    ? `<span class="status-used">已使用</span>`
+                    : `<span class="status-unused">未使用</span>`;
+
+                const usageInfo = item.is_used
+                    ? `<div style="font-size: 0.85rem;">IP: ${item.used_by_ip || '-'}<br>T: ${item.used_at || '-'}</div>`
+                    : '-';
+
+                html += `
+                    <tr>
+                        <td><span class="cdkey-code" onclick="copyToClipboard('${item.code}')" style="cursor:pointer">${item.code}</span></td>
+                        <td>${statusHtml}</td>
+                        <td>${usageInfo}</td>
+                        <td style="font-size: 0.85rem; color: var(--text-dim)">${item.created_at}</td>
+                        <td>
+                            <button class="btn-small btn-copy" onclick="copyToClipboard('${item.code}')">复制</button>
+                            <button class="btn-small btn-danger" onclick="deleteCdkey(${item.id})">删除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        async function generateCdkeys() {
+            const count = document.getElementById('generateCount').value;
+            const length = document.getElementById('generateLength').value;
+            try {
+                const res = await fetch('/api/cdkeys/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count, length })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`成功生成 ${data.count} 个卡密`);
+                    loadCdkeys();
+                }
+            } catch (e) { showToast('生成失败', true); }
+        }
+
+        async function exportCdkeys() { window.open('/api/cdkeys/export', '_blank'); }
+
+        async function cleanupCdkeys() {
+            if (!confirm('确定清理所有已使用的卡密吗？')) return;
+            try {
+                const res = await fetch('/api/cdkeys/cleanup', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { showToast(`清理完成，删除了 ${data.count} 条记录`); loadCdkeys(); }
+            } catch (e) { showToast('清理失败', true); }
+        }
+
+        async function clearAllCdkeys() {
+            if (!confirm('【警告】确定清空所有卡密吗？未使用卡密也将被永久删除！')) return;
+            try {
+                const res = await fetch('/api/cdkeys/cleanup_all', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { showToast(`已彻底清空所有卡密`); loadCdkeys(); }
+            } catch (e) { showToast('清空失败', true); }
+        }
+
+        async function deleteCdkey(id) {
+            if (!confirm('确定删除该卡密？')) return;
+            try {
+                const res = await fetch(`/api/cdkeys/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) { showToast('删除成功'); loadCdkeys(); }
+            } catch (e) { showToast('删除失败', true); }
+        }
+
+        // --- Account Management ---
+        async function loadAccounts() {
+            try {
+                const res = await fetch('/api/accounts');
+                const data = await res.json();
+                const container = document.getElementById('accountList');
+
+                if (!data.accounts || data.accounts.length === 0) {
+                    container.innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-dim);">暂无注册记录</div>';
                     return;
                 }
 
@@ -185,140 +460,106 @@
                     <table class="cdkey-table">
                         <thead>
                             <tr>
-                                <th>卡密</th>
-                                <th>状态</th>
-                                <th>使用时间</th>
-                                <th>使用IP</th>
-                                <th>创建时间</th>
+                                <th>邮箱</th>
+                                <th>推广码 (Promo Code)</th>
+                                <th>注册密码</th>
+                                <th>注册时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.accounts.forEach(acc => {
+                    html += `
+                        <tr>
+                            <td style="font-weight: 600">${acc.email}</td>
+                            <td><span class="cdkey-code" style="background:#f0fdf4; color:#166534" onclick="copyToClipboard('${acc.promo_code}')">${acc.promo_code || 'N/A'}</span></td>
+                            <td><code style="background:#f1f5f9; padding:2px 5px; border-radius:4px">${acc.password}</code></td>
+                            <td style="font-size: 0.85rem; color: var(--text-dim)">${acc.created_at}</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) { showToast('列表加载失败', true); }
+        }
+
+        // --- Security / Bans ---
+        async function loadBans() {
+            try {
+                const res = await fetch('/api/bans');
+                const data = await res.json();
+                const container = document.getElementById('banList');
+
+                if (!data.bans || data.bans.length === 0) {
+                    container.innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-dim);">当前没有封禁的 IP</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="cdkey-table">
+                        <thead>
+                            <tr>
+                                <th>封禁 IP</th>
+                                <th>原因</th>
+                                <th>封禁时间</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
                 `;
 
-                for (const cdkey of data.cdkeys) {
-                    const statusClass = cdkey.is_used ? 'status-used' : 'status-unused';
-                    const statusText = cdkey.is_used ? '已使用' : '未使用';
-
+                data.bans.forEach(b => {
                     html += `
                         <tr>
+                            <td style="font-weight: 700; color: var(--error)">${b.ip}</td>
+                            <td>${b.reason}</td>
+                            <td style="font-size: 0.85rem">${b.banned_at}</td>
                             <td>
-                                <span class="cdkey-code" onclick="copyCode('${cdkey.code}')" title="点击复制" style="cursor: pointer;">
-                                    ${cdkey.code}
-                                </span>
-                            </td>
-                            <td><span class="${statusClass}">${statusText}</span></td>
-                            <td style="font-size: 0.9rem;">${cdkey.used_at || '-'}</td>
-                            <td style="font-size: 0.9rem;">${cdkey.used_by_ip || '-'}</td>
-                            <td style="font-size: 0.9rem;">${cdkey.created_at}</td>
-                            <td>
-                                <button class="btn-small btn-copy" onclick="copyCode('${cdkey.code}')">复制</button>
-                                <button class="btn-small btn-danger" onclick="deleteCdkey(${cdkey.id})">删除</button>
+                                <button class="btn-small btn-warning" onclick="unbanIp('${b.ip}')">解除封禁</button>
                             </td>
                         </tr>
                     `;
-                }
+                });
 
                 html += '</tbody></table>';
                 container.innerHTML = html;
-
-            } catch (error) {
-                console.error('加载卡密失败:', error);
-                document.getElementById('cdkeyList').innerHTML =
-                    '<div style="padding: 2rem; text-align: center; color: var(--error);">加载失败，请刷新重试</div>';
-            }
+            } catch (e) { showToast('封禁列表加载失败', true); }
         }
 
-        // 生成卡密
-        async function generateCdkeys() {
-            const count = parseInt(document.getElementById('generateCount').value) || 10;
-            const length = parseInt(document.getElementById('generateLength').value) || 16;
-
-            // 简单loading
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '生成中...';
-            btn.disabled = true;
+        async function manualBan() {
+            const ip = document.getElementById('banIpInput').value;
+            const reason = document.getElementById('banReasonInput').value;
+            if (!ip) return showToast('请输入 IP 地址', true);
 
             try {
-                const response = await fetch('/api/cdkeys/generate', {
+                const res = await fetch('/api/bans/ban', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ count, length })
+                    body: JSON.stringify({ ip, reason })
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showToast(`成功生成 ${data.count} 个卡密`);
-                    loadCdkeys();
-                } else {
-                    showToast('生成失败');
-                }
-            } catch (error) {
-                console.error('生成卡密失败:', error);
-                showToast('生成失败');
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
+                const data = await res.json();
+                if (data.success) { showToast(`IP ${ip} 已封禁`); loadBans(); }
+            } catch (e) { showToast('封禁操作失败', true); }
         }
 
-        // 导出
-        async function exportCdkeys() {
+        async function unbanIp(ip) {
             try {
-                window.open('/api/cdkeys/export', '_blank');
-            } catch (error) {
-                console.error('导出失败:', error);
-                showToast('导出失败');
-            }
-        }
-
-        // 清理已使用
-        async function cleanupCdkeys() {
-            if (!confirm('确定要删除所有【已使用】的卡密吗？此操作不可恢复。')) return;
-
-            try {
-                const response = await fetch('/api/cdkeys/cleanup', { method: 'POST' });
-                const data = await response.json();
-
-                if (data.success) {
-                    showToast(`清理成功，共删除 ${data.count} 条记录`);
-                    loadCdkeys();
-                } else {
-                    showToast('清理失败: ' + (data.error || '未知错误'));
-                }
-            } catch (error) {
-                console.error('清理失败:', error);
-                showToast('清理失败');
-            }
-        }
-
-        // 删除卡密
-        async function deleteCdkey(id) {
-            if (!confirm('确定要删除这个卡密吗？')) return;
-
-            try {
-                const response = await fetch(`/api/cdkeys/${id}`, {
-                    method: 'DELETE'
+                const res = await fetch('/api/bans/unban', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip })
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showToast('删除成功');
-                    loadCdkeys();
-                } else {
-                    showToast('删除失败');
-                }
-            } catch (error) {
-                console.error('删除卡密失败:', error);
-                showToast('删除失败');
-            }
+                const data = await res.json();
+                if (data.success) { showToast('已解除封禁'); loadBans(); }
+            } catch (e) { showToast('解除封禁失败', true); }
         }
 
-        // 页面加载时获取数据
-        document.addEventListener('DOMContentLoaded', loadCdkeys);
+        // Init load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCdkeys();
+        });
     </script>
 </body>
 
