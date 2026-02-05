@@ -51,6 +51,12 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 RATE_LIMIT_STORAGE = {}
 RATE_LIMIT_LOCK = threading.Lock()
 
+def get_real_ip():
+    """获取真实 IP 地址（兼容代理/负载均衡）"""
+    if request.headers.getlist("X-Forwarded-For"):
+        return request.headers.getlist("X-Forwarded-For")[0]
+    return request.remote_addr
+
 def check_rate_limit(key, limit=5, window=60):
     """
     检查是否超过速率限制
@@ -93,7 +99,9 @@ threading.Thread(target=cleanup_rate_limit, daemon=True).start()
 
 # 配置数据库路径
 # 优先使用环境变量 DATA_DIR (Zeabur 等平台常用挂载路径)，如果没有则默认为当前目录
-DATA_DIR = os.environ.get("DATA_DIR", os.path.dirname(__file__))
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
 DB_PATH = os.path.join(DATA_DIR, "cpolar_accounts.db")
 
 print(f"=== Flask 应用配置完成, DB_PATH={DB_PATH} ===")
@@ -101,6 +109,7 @@ print(f"=== Flask 应用配置完成, DB_PATH={DB_PATH} ===")
 # 健康检查端点 - 用于 Zeabur 等平台验证服务是否存活
 @app.route('/health')
 def health_check():
+    """健康检查"""
     return jsonify({"status": "ok", "message": "Service is running"}), 200
 
 @app.route('/ping')
@@ -197,7 +206,9 @@ def register_single_task(index, invite_code):
 def login():
     if request.method == 'POST':
         # 速率限制：防止暴力破解 (每分钟5次)
-        if not check_rate_limit(request.remote_addr, limit=5, window=60):
+        # 修复：使用真实IP（兼容代理）
+        ip = get_real_ip()
+        if not check_rate_limit(ip, limit=5, window=60):
             return render_template('login.html', error="尝试次数过多，请1分钟后再试"), 429
 
         password = request.form.get('password')
@@ -289,7 +300,8 @@ def delete_cdkey(cdkey_id):
 def validate_cdkey():
     """验证卡密（公开接口）"""
     # 速率限制：防止暴力穷举卡密 (每分钟10次)
-    if not check_rate_limit(request.remote_addr, limit=10, window=60):
+    ip = get_real_ip()
+    if not check_rate_limit(ip, limit=10, window=60):
         return jsonify({"valid": False, "message": "请求过于频繁，请稍后再试"}), 429
 
     data = request.json or {}
@@ -311,9 +323,14 @@ def batch_register():
     invite_code = data.get('invite_code', '')
     cdkey = data.get('cdkey', '').strip().upper()
     
-    # 强制内置参数
-    count = 15
-    max_workers = 3
+    # 支持通过环境变量配置，增强灵活性
+    # 默认值: 15个账号, 3个并发
+    try:
+        count = int(os.environ.get('BATCH_COUNT', 15))
+        max_workers = int(os.environ.get('BATCH_WORKERS', 3))
+    except ValueError:
+        count = 15
+        max_workers = 3
 
     if not invite_code:
         return jsonify({"error": "请输入邀请码"}), 400
@@ -327,13 +344,14 @@ def batch_register():
     if not valid:
         return jsonify({"error": msg}), 403
         
-    # 标记卡密为已使用
-    used = db.use_cdkey(cdkey, request.remote_addr)
+    # 标记卡密为已使用，记录真实IP
+    ip = get_real_ip()
+    used = db.use_cdkey(cdkey, ip)
     if not used:
         return jsonify({"error": "卡密使用失败或已被他人抢先使用"}), 403
 
     def generate():
-        yield 'data: ' + json.dumps({"type": "info", "message": f"卡密验证成功！开始批量注册，目标数量: {count} (系统内置), 并发数: {max_workers}"}) + '\n\n'
+        yield 'data: ' + json.dumps({"type": "info", "message": f"卡密验证成功！开始批量注册，目标数量: {count}, 并发数: {max_workers}"}) + '\n\n'
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 提交所有任务
