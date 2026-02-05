@@ -13,6 +13,9 @@ class OrderVerifier:
         self.account = os.environ.get("YUDIAN_ACCOUNT")
         self.password = os.environ.get("YUDIAN_PASSWORD")
         self.db_path = db_path
+        # 代理获取API
+        self.proxy_api = "http://bapi.51daili.com/getapi2?linePoolIndex=-1&packid=2&time=2&qty=1&port=1&format=txt&ct=1&usertype=17&uid=35391&accessName=suimi&accessPassword=4e384629a0857cf252120a0cef284190&skey=autoaddwhiteip"
+        self.proxies = None
         
         self.headers = {
             "accept": "application/json, text/plain, */*",
@@ -24,6 +27,30 @@ class OrderVerifier:
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0"
         }
         
+    def _refresh_proxy(self):
+        """刷新代理IP"""
+        try:
+            print("正在从51daili获取新代理IP...")
+            # 获取代理本身不用代理
+            resp = requests.get(self.proxy_api, timeout=10)
+            if resp.status_code == 200:
+                proxy_str = resp.text.strip()
+                # 简单校验格式 (xxx.xxx.xxx.xxx:xxxx)
+                if '.' in proxy_str and ':' in proxy_str and 'div' not in proxy_str:
+                    self.proxies = {
+                        "http": f"http://{proxy_str}",
+                        "https": f"http://{proxy_str}"
+                    }
+                    print(f"代理IP已更新: {proxy_str}")
+                    return True
+                else:
+                    print(f"代理API返回格式异常: {proxy_str}")
+            else:
+                print(f"获取代理失败, 状态码: {resp.status_code}")
+        except Exception as e:
+            print(f"获取代理IP出错: {e}")
+        return False
+
     def _read_token(self):
         """从本地文件读取Token"""
         token_file = os.path.join(os.path.dirname(self.db_path), 'yudian_token.json')
@@ -49,6 +76,10 @@ class OrderVerifier:
 
     def _get_captcha(self):
         """获取验证码"""
+        # 如果当前没有代理，先获取一个
+        if not self.proxies:
+            self._refresh_proxy()
+            
         try:
             t = int(time.time() * 1000)
             url = f"{self.base_url}/captcha_custom"
@@ -58,11 +89,21 @@ class OrderVerifier:
                 "pageTransition": t
             }
             
-            resp = requests.get(url, params=params, headers=self.headers, timeout=10)
+            # 使用代理请求
+            resp = requests.get(url, params=params, headers=self.headers, timeout=10, proxies=self.proxies)
             if resp.status_code == 200:
                 return resp.json()
         except Exception as e:
-            print(f"获取验证码失败: {e}")
+            print(f"获取验证码请求失败 (尝试刷新代理): {e}")
+            # 失败后尝试刷新代理重试一次
+            if self._refresh_proxy():
+                try:
+                    resp = requests.get(url, params=params, headers=self.headers, timeout=10, proxies=self.proxies)
+                    if resp.status_code == 200:
+                        return resp.json()
+                except Exception as retry_e:
+                    print(f"重试获取验证码失败: {retry_e}")
+                    
         return None
 
     def _solve_captcha(self, captcha_data):
@@ -84,12 +125,11 @@ class OrderVerifier:
             _headers = {
                 "Content-Type": "application/json"
             }
-            # 设置短超时防止打码平台卡死
+            # 打码平台一般直连即可，不需要走代理，且为了稳定建议不走
             resp = requests.post(url, headers=_headers, json=data, timeout=15)
             response = resp.json()
             print(f"打码平台响应: {response}")
             
-            # 根据云码文档逻辑，通常 success=1 或 code=10000 代表成功，data/data.code 为结果
             if str(response.get('code')) == '10000':
                 verify_code = response.get('data', {}).get('data')
                 return verify_code
@@ -135,8 +175,8 @@ class OrderVerifier:
         }
         
         try:
-            # 登录接口貌似是 POST JSON
-            resp = requests.post(login_url, json=payload, headers=self.headers, timeout=15)
+            # 登录也需要走代理
+            resp = requests.post(login_url, json=payload, headers=self.headers, timeout=15, proxies=self.proxies)
             data = resp.json()
             
             if data.get('status') == 200:
@@ -177,6 +217,10 @@ class OrderVerifier:
 
         search_url = f"{self.base_url}/home/xianyu_list"
         
+        # 确保有代理
+        if not self.proxies:
+            self._refresh_proxy()
+        
         def do_request(curr_token):
             headers = self.headers.copy()
             headers["authori-zation"] = f"Bearer {curr_token}"
@@ -188,7 +232,13 @@ class OrderVerifier:
                 "real_name": order_id, 
                 "field_key": "all"
             }
-            return requests.get(search_url, params=params, headers=headers, timeout=15)
+            # 查询订单也需要走代理
+            try:
+                return requests.get(search_url, params=params, headers=headers, timeout=15, proxies=self.proxies)
+            except Exception as req_e:
+                print(f"查询请求异常 (尝试刷新代理): {req_e}")
+                self._refresh_proxy()
+                return requests.get(search_url, params=params, headers=headers, timeout=15, proxies=self.proxies)
 
         try:
             resp = do_request(token)
