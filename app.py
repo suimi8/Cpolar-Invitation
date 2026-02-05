@@ -7,10 +7,14 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+print("=== Flask 应用初始化开始 ===")
+
 # 导入核心功能
 from core.register import CpolarRegister
 from core.login import CpolarLogin
 from database.manager import Database
+
+print("=== 核心模块导入完成 ===")
 
 app = Flask(__name__)
 
@@ -31,6 +35,20 @@ app.config['SESSION_COOKIE_SECURE'] = False  # 兼容 HTTP 访问，若全站 HT
 # 优先使用环境变量 DATA_DIR (Zeabur 等平台常用挂载路径)，如果没有则默认为当前目录
 DATA_DIR = os.environ.get("DATA_DIR", os.path.dirname(__file__))
 DB_PATH = os.path.join(DATA_DIR, "cpolar_accounts.db")
+
+print(f"=== Flask 应用配置完成, DB_PATH={DB_PATH} ===")
+
+# 健康检查端点 - 用于 Zeabur 等平台验证服务是否存活
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "ok", "message": "Service is running"}), 200
+
+@app.route('/ping')
+def ping():
+    return "pong", 200
+
+print("=== 健康检查端点已注册 ===")
+
 
 def login_required(f):
     """登录验证装饰器"""
