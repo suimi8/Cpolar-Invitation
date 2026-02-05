@@ -1,5 +1,4 @@
-from gevent import monkey
-monkey.patch_all()
+
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, session, redirect, url_for
 import sys
 import os
