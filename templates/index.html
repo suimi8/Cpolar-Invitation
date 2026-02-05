@@ -9,28 +9,82 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
         rel="stylesheet">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <style>
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-text {
+            text-align: left;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn,
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .nav-btn {
+            background: var(--bg-color);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .nav-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .logout-btn {
+            color: var(--text-dim);
+        }
+
+        .logout-btn:hover {
+            color: var(--error);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="background-blobs">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-    </div>
-
     <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="header-text">
-                    <h1>Cpolar <span class="accent">Batch</span></h1>
-                    <p class="subtitle">高效、稳定的自动化批量注册套件</p>
-                </div>
-                <div class="header-actions">
-                    {% if is_admin %}
-                    <a href="/admin" class="nav-btn">后台管理</a>
-                    {% endif %}
-                    <a href="/logout" class="logout-btn">退出登录</a>
-                </div>
+        <header class="header-content">
+            <div class="header-text">
+                <h1>Cpolar <span class="accent">Batch</span></h1>
+                <p class="subtitle">高效、稳定的自动化批量注册套件</p>
+            </div>
+            <div class="header-actions">
+                {% if is_admin %}
+                <a href="/admin" class="nav-btn">后台管理</a>
+                {% endif %}
+                <a href="/logout" class="logout-btn">退出登录</a>
             </div>
         </header>
 
@@ -40,7 +94,6 @@
                     <label for="inviteCode">邀请码</label>
                     <input type="text" id="inviteCode" placeholder="输入邀请码..." value="">
                 </div>
-                <!-- 注册数量和并发线程已内置 (15个账号, 3并发) -->
 
                 <div class="field">
                     <label for="cdkey">验证卡密</label>
@@ -50,9 +103,9 @@
                 <button id="startBtn" class="primary-btn">验证卡密并开始注册</button>
             </div>
 
-            <div class="status-panel" id="statusPanel" style="display: none;">
+            <div class="status-panel" id="statusPanel" style="display: none; margin-top: 2rem;">
                 <div class="progress-container">
-                    <div class="progress-info">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem;">
                         <span id="progressText">准备中...</span>
                         <span id="percentage">0%</span>
                     </div>
@@ -60,35 +113,38 @@
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
                 </div>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <label>已完成</label>
-                        <span id="completedNum">0</span>
+
+                <div class="stats-row" style="margin-top: 1.5rem; grid-template-columns: 1fr 1fr;">
+                    <div class="stat-card">
+                        <div class="number" id="completedNum">0</div>
+                        <div class="label">已完成</div>
                     </div>
-                    <div class="stat-item">
-                        <label>成功</label>
-                        <span id="successNum" class="success-text">0</span>
+                    <div class="stat-card">
+                        <div class="number success-text" id="successNum" style="color: var(--success);">0</div>
+                        <div class="label">成功</div>
                     </div>
                 </div>
             </div>
 
-            <div class="log-container" id="logContainer">
-                <div class="log-header">
-                    <h3>实时日志</h3>
-                    <button id="clearLogs" class="text-btn">清空</button>
+            <div class="log-container" id="logContainer" style="margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                    <h3 style="font-size: 1.1rem;">实时日志</h3>
+                    <button id="clearLogs"
+                        style="background: none; border: none; color: var(--text-dim); cursor: pointer;">清空</button>
                 </div>
-                <div class="log-content" id="logContent">
+                <div class="log-box" id="logContent">
                     <div class="log-entry system">等待任务开始...</div>
                 </div>
             </div>
         </main>
 
         <footer>
-            <p>&copy; 2025 Cpolar Automation Suite • Power by Python & Flask</p>
+            <p>&copy; 2025 Cpolar Automation Suite</p>
         </footer>
     </div>
 
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/background.js"></script>
 </body>
 
 </html>

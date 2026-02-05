@@ -9,88 +9,12 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
         rel="stylesheet">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 </head>
 
-<style>
-    /* 极简主义覆盖样式 */
-    body {
-        background: #09090b !important;
-        /* 极简深黑 */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .background-blobs {
-        display: none !important;
-    }
-
-    .container {
-        max-width: 420px !important;
-        padding: 2rem;
-    }
-
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        box-shadow: none !important;
-        padding: 3rem 2rem !important;
-    }
-
-    h1 {
-        font-size: 2.5rem !important;
-        margin-bottom: 0.5rem;
-    }
-
-    .subtitle {
-        opacity: 0.6;
-        font-size: 0.95rem;
-    }
-
-    input {
-        background: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        padding: 1rem !important;
-        transition: all 0.2s ease;
-    }
-
-    input:focus {
-        background: rgba(255, 255, 255, 0.08) !important;
-        border-color: var(--primary) !important;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
-    }
-
-    .primary-btn {
-        width: 100%;
-        background: var(--primary) !important;
-        /* 纯色，去渐变 */
-        box-shadow: none !important;
-        padding: 0.8rem !important;
-        /* 稍微调小一点padding让它精致点，或者保持 */
-        margin-top: 1rem;
-        border-radius: 8px !important;
-        /* 更方一点或统一圆角 */
-    }
-
-    .primary-btn:hover {
-        background: var(--primary-hover) !important;
-        transform: translateY(-1px) !important;
-    }
-
-    footer {
-        margin-top: 2rem;
-        opacity: 0.3;
-        font-size: 0.8rem;
-    }
-</style>
-
 <body>
-    <!-- 背景已通过 CSS 隐藏 -->
-    <div class="background-blobs">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-    </div>
+    <!-- 所有的背景都在 CSS 和 Three.js 中处理 -->
 
     <div class="container login-container">
         <header>
@@ -100,15 +24,16 @@
 
         <main class="glass-card login-card">
             <form id="loginForm" method="POST" action="/login">
-                <div class="field" style="margin-bottom: 1.5rem;">
-                    <!-- 移除 label，用 placeholder 即可，更加极简 -->
-                    <!-- <label for="password">访问密码</label> -->
-                    <input type="password" id="password" name="password" placeholder="请输入您的访问密码" autofocus
-                        style="width: 100%;">
+                <div class="input-group">
+                    <div class="field">
+                        <label for="password">访问密码</label>
+                        <input type="password" id="password" name="password" placeholder="请输入您的访问密码" autofocus>
+                    </div>
                 </div>
 
                 {% if error %}
-                <div class="error-message" style="margin-bottom: 1rem; text-align: center;">
+                <div class="error-message"
+                    style="color: var(--error); text-align: center; margin-bottom: 1rem; font-size: 0.9rem;">
                     {{ error }}
                 </div>
                 {% endif %}
@@ -121,6 +46,8 @@
             <p>&copy; 2025 Cpolar Automation Suite</p>
         </footer>
     </div>
+
+    <script src="/static/js/background.js"></script>
 </body>
 
 </html>

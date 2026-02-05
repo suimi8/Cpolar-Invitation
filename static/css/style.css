@@ -1,14 +1,21 @@
 :root {
+    /* 简约白色主题变量 */
     --primary: #6366f1;
+    /* 保持品牌紫，不仅好看也护眼 */
     --primary-hover: #4f46e5;
-    --bg-dark: #0f172a;
-    --card-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --text-main: #f8fafc;
-    --text-dim: #94a3b8;
+    --bg-color: #f8fafc;
+    /* 极浅灰白背景 */
+    --card-bg: rgba(255, 255, 255, 0.75);
+    /* 高透白卡片 */
+    --text-main: #1e293b;
+    /* 深蓝灰文字，比纯黑柔和 */
+    --text-dim: #64748b;
+    /* 次级文字 */
+    --border-color: rgba(0, 0, 0, 0.06);
+    --glass-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+
     --success: #10b981;
     --error: #ef4444;
-    --accent: #8b5cf6;
 }
 
 * {
@@ -19,103 +26,78 @@
 
 body {
     font-family: 'Outfit', 'Noto Sans SC', sans-serif;
-    background-color: var(--bg-dark);
+    background-color: var(--bg-color);
     color: var(--text-main);
     overflow-x: hidden;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
 }
 
-.background-blobs {
+/* Three.js Canvas 容器 */
+#canvas-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: -1;
-    filter: blur(80px);
-}
-
-.blob {
-    position: absolute;
-    width: 40vw;
-    height: 40vw;
-    border-radius: 50%;
-    opacity: 0.2;
-    animation: move 20s infinite alternate;
-}
-
-.blob-1 {
-    background: var(--primary);
-    top: -10%;
-    left: -10%;
-}
-
-.blob-2 {
-    background: var(--accent);
-    bottom: -10%;
-    right: -10%;
-    animation-delay: -5s;
-}
-
-.blob-3 {
-    background: #ec4899;
-    top: 40%;
-    left: 30%;
-    width: 20vw;
-    height: 20vw;
-    animation-delay: -10s;
-}
-
-@keyframes move {
-    from { transform: translate(0, 0) scale(1); }
-    to { transform: translate(5%, 5%) scale(1.1); }
+    opacity: 0.6;
+    /* 淡淡的背景 */
 }
 
 .container {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
+    /* 默认宽度 */
     padding: 2rem;
-    animation: fadeIn 1s ease-out;
+    position: relative;
+    z-index: 10;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+/* 宽屏容器（用于后台） */
+.container-wide {
+    max-width: 1400px !important;
+    /* 足够宽以容纳表格 */
+    width: 95%;
 }
 
 header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 2.5rem;
 }
 
 h1 {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 800;
-    letter-spacing: -2px;
+    letter-spacing: -1px;
     margin-bottom: 0.5rem;
+    color: var(--text-main);
 }
 
 .accent {
-    background: linear-gradient(to right, var(--primary), var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--primary);
+    background: none;
+    -webkit-text-fill-color: initial;
 }
 
 .subtitle {
     color: var(--text-dim);
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
+/* 玻璃拟态卡片 - 白色版 */
 .glass-card {
     background: var(--card-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
     border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    padding: 3rem;
+    box-shadow: var(--glass-shadow);
+    transition: transform 0.3s ease;
 }
 
 .input-group {
@@ -129,270 +111,206 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    flex: 1;
-}
-
-.field-row {
-    display: flex;
-    gap: 1rem;
 }
 
 label {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-dim);
-    margin-left: 0.4rem;
+    color: var(--text-main);
+    margin-left: 0.2rem;
 }
 
-input {
-    background: rgba(15, 23, 42, 0.5);
-    border: 1px solid var(--glass-border);
+input,
+select {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 0.8rem 1rem;
-    color: white;
+    padding: 1rem 1.2rem;
+    color: var(--text-main);
     font-family: inherit;
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 
 input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.primary-btn {
-    background: linear-gradient(135deg, var(--primary), var(--accent));
-    color: white;
-    border: none;
-    border-radius: 14px;
-    padding: 1.1rem;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.primary-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
-}
-
-.primary-btn:active {
-    transform: translateY(0);
-}
-
-.primary-btn:disabled {
-    opacity: 0.5;
-    cursor: wait;
-    transform: none;
-}
-
-/* Progress Section */
-.status-panel {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--glass-border);
-}
-
-.progress-info {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(to right, var(--primary), var(--accent));
-    width: 0%;
-    transition: width 0.3s ease;
-}
-
-.stats-row {
-    display: flex;
-    gap: 2rem;
-    margin-top: 1.5rem;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-item label {
-    margin-left: 0;
-}
-
-.stat-item span {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.success-text { color: var(--success); }
-
-/* Logs */
-.log-container {
-    margin-top: 2rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.8rem 1.2rem;
-    background: rgba(0, 0, 0, 0.1);
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.log-header h3 {
-    font-size: 0.9rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.log-content {
-    height: 200px;
-    overflow-y: auto;
-    padding: 1rem;
-    font-family: 'Consolas', monospace;
-    font-size: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.log-entry {
-    line-height: 1.4;
-}
-
-.log-entry.system { color: var(--text-dim); }
-.log-entry.success { color: var(--success); }
-.log-entry.error { color: var(--error); }
-.log-entry.info { color: var(--primary); }
-
-.text-btn {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-size: 0.8rem;
-    text-decoration: underline;
-}
-
-footer {
-    text-align: center;
-    margin-top: 2rem;
-    color: var(--text-dim);
-    font-size: 0.8rem;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-/* Login & Header Styles */
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 3rem;
-}
-
-.header-text {
-    text-align: left;
-}
-
-.logout-btn {
-    text-decoration: none;
-    color: var(--text-dim);
-    border: 1px solid var(--glass-border);
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    transition: all 0.3s;
-    background: rgba(0,0,0,0.2);
-}
-
-.logout-btn:hover {
-    color: white;
-    background: var(--error);
-    border-color: var(--error);
-}
-
-.login-container {
-    max-width: 450px;
-}
-
-.login-card {
-    padding: 3rem;
-}
-
-.error-message {
-    background: rgba(239, 68, 68, 0.2);
-    color: #fca5a5;
-    padding: 0.8rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    font-size: 0.9rem;
-    text-align: center;
-}
-
-/* Header actions */
-.header-actions {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.nav-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-main);
-    border: 1px solid var(--glass-border);
-    border-radius: 10px;
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-}
-
-.nav-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--primary);
-}
-
+.primary-btn,
 .secondary-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-main);
-    border: 1px solid var(--glass-border);
-    border-radius: 14px;
-    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 2rem;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
+}
+
+.primary-btn {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    width: 100%;
+}
+
+.primary-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+
+.secondary-btn {
+    background: #ffffff;
+    color: var(--text-dim);
+    border: 1px solid #e2e8f0;
 }
 
 .secondary-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--primary);
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+
+/* 后台表格样式优化 */
+.cdkey-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: nowrap;
+    /* 不换行 */
+    align-items: center;
+    background: white;
+    padding: 1rem;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+}
+
+.cdkey-controls input {
+    width: 100px;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.stat-card .number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.2rem;
+}
+
+/* 确保表格不换行，且美观 */
+.table-container {
+    overflow-x: auto;
+    /* 允许横向滚动 */
+    border-radius: 16px;
+    background: white;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.cdkey-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+    /* 最小宽度强制撑开，防止挤压 */
+}
+
+.cdkey-table th {
+    background: #f8fafc;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 1rem 1.5rem;
+    text-align: left;
+}
+
+.cdkey-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-main);
+}
+
+.cdkey-code {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    background: #f1f5f9;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.status-used {
+    color: var(--error);
+    background: rgba(239, 68, 68, 0.1);
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.status-unused {
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+}
+
+footer {
+    margin-top: 3rem;
+    text-align: center;
+    color: var(--text-dim);
+    opacity: 0.6;
+}
+
+/* 登录页特定 */
+.login-container {
+    max-width: 440px;
+}
+
+.login-card {
+    padding: 3rem 2.5rem;
+}
+
+/* 实时日志区域 */
+.log-box {
+    margin-top: 2rem;
+    background: #1e293b;
+    /* 日志保持深色底，才像终端 */
+    border-radius: 16px;
+    padding: 1.5rem;
+    height: 300px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
 }
