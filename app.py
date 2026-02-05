@@ -5,6 +5,7 @@ import os
 import json
 import time
 import traceback
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 print("=== Flask 应用初始化开始 ===")
