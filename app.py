@@ -8,6 +8,8 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 print("=== Flask 应用初始化开始 ===")
+print(f"=== 环境变量 PORT = {os.environ.get('PORT', '未设置')} ===")
+print(f"=== 环境变量 WEB_PORT = {os.environ.get('WEB_PORT', '未设置')} ===")
 
 # 导入核心功能
 from core.register import CpolarRegister
