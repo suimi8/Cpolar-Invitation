@@ -480,8 +480,8 @@ def batch_register():
         count = 15
         max_workers = 3
 
-    if not invite_code:
-        return jsonify({"error": "请输入邀请码"}), 400
+    if not invite_code or not re.match(r'^[A-Za-z0-9_-]{4,20}$', invite_code):
+        return jsonify({"error": "邀请码格式非法"}), 400
         
     if not cdkey:
         return jsonify({"error": "请输入验证卡密"}), 400
@@ -579,6 +579,12 @@ def export_cdkeys():
     )
 
 if __name__ == '__main__':
+    # 安全加固：强制管理员密码和访问密码不同，否则拒绝启动
+    if ADMIN_PASSWORD == SITE_PASSWORD:
+        print("CRITICAL SECURITY ERROR: ADMIN_PASSWORD and SITE_PASSWORD MUST be different!")
+        print("Please check your environment variables or .env file.")
+        sys.exit(1)
+
     # 确保数据库文件所在目录存在
     db_dir = os.path.dirname(DB_PATH)
     if not os.path.exists(db_dir):

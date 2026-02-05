@@ -27,8 +27,13 @@ class CpolarRegister:
         }
 
     def get_csrf_token(self, invite_code):
-        """获取CSRF Token"""
-        url = f"https://dashboard.cpolar.com/signup?channel=0&inviteCode={invite_code}"
+        """获取CSRF Token (含邀请码合法性校验)"""
+        # 安全加固：严格校验邀请码格式，防止 URL 注入
+        if not invite_code or not re.match(r'^[A-Za-z0-9_-]{4,20}$', invite_code):
+            error_msg = f"非法邀请码格式: {invite_code}"
+            return None, error_msg
+
+        url = f"https://dashboard.cpolar.com/signup?channel=0&inviteCode={quote(invite_code)}"
         
         try:
             response = self.session.get(url, headers=self.headers, timeout=30)
