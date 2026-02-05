@@ -6,6 +6,9 @@ import json
 import time
 import traceback
 import threading
+import re
+import requests
+from bs4 import BeautifulSoup
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -397,6 +400,62 @@ def delete_cdkey(cdkey_id):
     deleted = db.delete_cdkey(cdkey_id)
     
     return jsonify({"success": deleted})
+
+@app.route('/api/get_cpolar_promo', methods=['POST'])
+@login_required
+def get_cpolar_promo():
+    """自动化获取 Cpolar 推广码"""
+    data = request.json or {}
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"success": False, "message": "请输入 Cpolar 账号和密码"})
+    
+    # 每次请求创建独立的 Session，确保并发时的会话隔离
+    session = requests.Session()
+    try:
+        # 1. 获取登录页面提取 CSRF Token
+        login_res = session.get("https://dashboard.cpolar.com/login", timeout=10)
+        soup = BeautifulSoup(login_res.text, 'html.parser')
+        csrf_input = soup.find('input', {'name': 'csrf_token'})
+        if not csrf_input:
+            return jsonify({"success": False, "message": "无法获取登录令牌"})
+        
+        csrf_token = csrf_input['value']
+        
+        # 2. 模拟 POST 登录
+        payload = {
+            "login": email,
+            "password": password,
+            "csrf_token": csrf_token
+        }
+        headers = {
+            "Referer": "https://dashboard.cpolar.com/login",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        
+        # 禁用重定向以检查是否登录成功 (302) 或 留在登录页 (200)
+        response = session.post("https://dashboard.cpolar.com/login", data=payload, headers=headers, timeout=15, allow_redirects=True)
+        
+        # 如果还在登录页，说明密码错
+        if "login" in response.url and response.status_code == 200:
+            return jsonify({"success": False, "message": "Cpolar 登录失败：账号或密码错误"})
+            
+        # 3. 访问推广页获取代码
+        envoy_res = session.get("https://dashboard.cpolar.com/envoy", timeout=10)
+        
+        # 使用正则提取 i.cpolar.com/m/XXXX
+        match = re.search(r'i\.cpolar\.com/m/([A-Z0-9]+)', envoy_res.text)
+        if match:
+            promo_code = match.group(1)
+            return jsonify({"success": True, "promo_code": promo_code})
+        else:
+            return jsonify({"success": False, "message": "登录成功，但未在该页面找到推广码。请先在 Cpolar 官网确认您已获得推广链接。"})
+            
+    except Exception as e:
+        print(f"获取推广码异常: {str(e)}")
+        return jsonify({"success": False, "message": "连接 Cpolar 服务器超时或失败"})
 
 @app.route('/api/cdkeys/validate', methods=['POST'])
 def validate_cdkey():

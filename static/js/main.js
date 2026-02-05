@@ -120,4 +120,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     }
+
+    // --- Cpolar Promo Code Fetch Logic ---
+    const openFetchModal = document.getElementById('openFetchModal');
+    const fetchModal = document.getElementById('fetchModal');
+    const closeFetchModal = document.getElementById('closeFetchModal');
+    const doFetchCode = document.getElementById('doFetchCode');
+    const cpolarEmail = document.getElementById('cpolarEmail');
+    const cpolarPassword = document.getElementById('cpolarPassword');
+
+    openFetchModal.addEventListener('click', () => {
+        fetchModal.style.display = 'flex';
+    });
+
+    closeFetchModal.addEventListener('click', () => {
+        fetchModal.style.display = 'none';
+    });
+
+    doFetchCode.addEventListener('click', async () => {
+        const email = cpolarEmail.value.trim();
+        const password = cpolarPassword.value.trim();
+
+        if (!email || !password) {
+            alert('请输入 Cpolar 账号和密码');
+            return;
+        }
+
+        const originalText = doFetchCode.innerText;
+        doFetchCode.innerText = '正在获取...';
+        doFetchCode.disabled = true;
+
+        try {
+            const res = await fetch('/api/get_cpolar_promo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                inviteCodeInput.value = data.promo_code;
+                fetchModal.style.display = 'none';
+                addLog(`成功自动获取推广码: ${data.promo_code}`, 'success');
+            } else {
+                alert(data.message || '获取失败，请重试');
+            }
+        } catch (e) {
+            alert('网络错误，请稍后再试');
+        } finally {
+            doFetchCode.innerText = originalText;
+            doFetchCode.disabled = false;
+        }
+    });
 });
