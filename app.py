@@ -344,18 +344,16 @@ def cleanup_all_cdkeys():
 @app.route('/api/accounts', methods=['GET'])
 @admin_required
 def get_accounts():
-    """获取所有注册账号"""
+    """获取邀请码统计信息（不再返回详细用户列表，保护隐私）"""
     db = Database(DB_PATH)
-    accounts = db.get_all_accounts()
+    stats = db.get_statistics()
     return jsonify({
-        "accounts": [
+        "total": stats['total'],
+        "invite_stats": [
             {
-                "id": row[0],
-                "email": row[1],
-                "password": row[2],
-                "promo_code": row[3],
-                "created_at": row[4]
-            } for row in accounts
+                "invite_code": row[0],
+                "count": row[1]
+            } for row in stats['invite_stats']
         ]
     })
 
