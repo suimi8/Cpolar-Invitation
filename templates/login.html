@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - Cpolar 批量注册工具</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <div class="background-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
     </div>
-    
+
     <div class="container login-container">
         <header>
             <h1>Cpolar <span class="accent">Login</span></h1>
@@ -23,10 +27,24 @@
         <main class="glass-card login-card">
             <form id="loginForm" method="POST" action="/login">
                 <div class="field">
-                    <label for="password">访问密码</label>
-                    <input type="password" id="password" name="password" placeholder="请输入密码..." required autofocus>
+                    <label for="order_id">订单号 / 访问密码</label>
+                    <input type="text" id="order_id" name="order_id" placeholder="请输入订单号 (或管理员密码填入此框)..." autofocus>
+                    <!-- 保留密码字段以便兼容旧的管理员登录习惯，或者直接统一用一个输入框在后端判断 -->
+                    <input type="hidden" name="password" id="hidden_password">
                 </div>
-                
+
+                <script>
+                    // 简单的脚本：将输入的值同时赋给 order_id 和 password (如果像是密码的话)
+                    // 或者更简单：修改后端只读一个字段。但为了最小化改动，我们在提交前处理
+                    document.getElementById('loginForm').addEventListener('submit', function (e) {
+                        const inputVal = document.getElementById('order_id').value;
+                        // 简单的启发式：如果包含字母且长度较短可能是密码，如果是纯数字长串可能是订单号
+                        // 但为了保险，我们让后端都尝试一下。
+                        // 这里我们把值复制给 password 字段，这样后端 request.form.get('password') 也能拿到值
+                        document.getElementById('hidden_password').value = inputVal;
+                    });
+                </script>
+
                 {% if error %}
                 <div class="error-message">
                     {{ error }}
@@ -42,4 +60,5 @@
         </footer>
     </div>
 </body>
+
 </html>
