@@ -61,29 +61,12 @@ def get_real_ip():
         return request.headers.getlist("X-Forwarded-For")[0]
     return request.remote_addr
 
-def check_rate_limit(key, limit=5, window=60):
+def check_rate_limit(ip, endpoint, limit=5, window=60):
     """
-    检查是否超过速率限制
-    :param key: 唯一标识（如IP）
-    :param limit: 时间窗口内的最大请求数
-    :param window: 时间窗口（秒）
-    :return: True if allowed, False if limited
+    检查是否超过速率限制 (持久化存储版本)
     """
-    now = time.time()
-    with RATE_LIMIT_LOCK:
-        if key not in RATE_LIMIT_STORAGE:
-            RATE_LIMIT_STORAGE[key] = []
-        
-        # 清理过期的记录
-        RATE_LIMIT_STORAGE[key] = [t for t in RATE_LIMIT_STORAGE[key] if now - t < window]
-        
-        # 检查是否超限
-        if len(RATE_LIMIT_STORAGE[key]) >= limit:
-            return False
-            
-        # 记录本次请求
-        RATE_LIMIT_STORAGE[key].append(now)
-        return True
+    db = Database(DB_PATH)
+    return db.check_rate_limit(ip, endpoint, limit, window)
 
 def cleanup_rate_limit():
     """定期清理未使用的限流数据"""
@@ -217,11 +200,15 @@ def login():
             return render_template('login.html', error="您的IP因多次登录失败已被封禁，请联系管理员解除。"), 403
 
         # 1. 速率限制：防止暴力破解 (每分钟5次请求)
-        if not check_rate_limit(ip, limit=5, window=60):
+        if not check_rate_limit(ip, "/login", limit=5, window=60):
             return render_template('login.html', error="请求过于频繁，请1分钟后再试"), 429
 
         password = request.form.get('password')
         
+        # 1.5 安全审计：如果管理员密码和普通密码相同，禁止管理员登录
+        if password == ADMIN_PASSWORD and ADMIN_PASSWORD == SITE_PASSWORD:
+             return render_template('login.html', error="系统配置错误：管理员密码不得与访问密码相同，请修改环境变量。"), 500
+
         # 2. 验证密码
         if password == ADMIN_PASSWORD:
             if ip in LOGIN_FAILED_ATTEMPTS: del LOGIN_FAILED_ATTEMPTS[ip]
@@ -462,7 +449,7 @@ def validate_cdkey():
     """验证卡密（公开接口）"""
     # 速率限制：防止暴力穷举卡密 (每分钟10次)
     ip = get_real_ip()
-    if not check_rate_limit(ip, limit=10, window=60):
+    if not check_rate_limit(ip, "/validate_cdkey", limit=10, window=60):
         return jsonify({"valid": False, "message": "请求过于频繁，请稍后再试"}), 429
 
     data = request.json or {}

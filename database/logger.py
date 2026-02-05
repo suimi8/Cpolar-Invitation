@@ -39,9 +39,24 @@ class ErrorLogger:
                   module_name: str = "Unknown", function_name: str = "Unknown",
                   error_traceback: str = None) -> int:
         """
-        记录错误
-        返回: 错误记录的 ID
+        记录错误 (包含敏感信息脱敏)
         """
+        import re
+        
+        # 脱敏处理：屏蔽常见的密码、卡密、邮箱格式
+        def mask_sensitive(text):
+            if not text: return text
+            # 屏蔽密码字段的值 (如果 message 中包含 password=... 或 "password": "...")
+            text = re.sub(r'([Pp]assword[\'"]?\s*[:=]\s*[\'"]?)[^\'",\s&]+([\'"]?)', r'\1********\2', text)
+            # 屏蔽邮箱地址
+            text = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', r'***@***.com', text)
+            # 屏蔽看起来像卡密的 12-24 位大写字母数字组合
+            text = re.sub(r'\b[A-Z0-9]{12,24}\b', r'CDKEY-*******', text)
+            return text
+
+        error_message = mask_sensitive(error_message)
+        error_traceback = mask_sensitive(error_traceback)
+
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         

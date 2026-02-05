@@ -57,6 +57,17 @@ class Database:
                 )
             ''')
 
+            # 请求日志表 (用于持久化限流)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS request_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip_address TEXT NOT NULL,
+                    endpoint TEXT NOT NULL,
+                    timestamp REAL NOT NULL
+                )
+            ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_request_logs_ip ON request_logs(ip_address, timestamp)')
+
             cursor.execute("PRAGMA table_info(accounts)")
             columns = [column[1] for column in cursor.fetchall()]
 
@@ -91,6 +102,7 @@ class Database:
         cursor = conn.cursor()
 
         try:
+            # 安全加固：不再记录密码到本地数据库，仅记录审计信息
             cursor.execute('''
                 INSERT INTO accounts (name, email, phone, password, invite_code, promo_code, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -98,7 +110,7 @@ class Database:
                 account_info['name'],
                 account_info['email'],
                 account_info['phone'],
-                account_info['password'],
+                "********",  # 脱敏处理：不再存储真实密码
                 account_info['invite_code'],
                 account_info.get('promo_code', None),
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -464,11 +476,50 @@ class Database:
             conn.close()
 
     def get_all_accounts(self):
-        """获取所有账号（含推广码）"""
+        """获取所有账号（仅限非敏感信息）"""
         conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
         try:
-            cursor.execute('SELECT id, email, password, promo_code, created_at FROM accounts ORDER BY created_at DESC')
+            # 安全加固：不再返回密码字段
+            cursor.execute('SELECT id, email, "********", promo_code, created_at FROM accounts ORDER BY created_at DESC')
             return cursor.fetchall()
+        finally:
+            conn.close()
+
+    # --- 持久化限流机制 ---
+
+    def log_request(self, ip, endpoint):
+        """记录请求日志"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('INSERT INTO request_logs (ip_address, endpoint, timestamp) VALUES (?, ?, ?)', 
+                           (ip, endpoint, time.time()))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def check_rate_limit(self, ip, endpoint, limit=5, window=60):
+        """持久化频率限制检查"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        now = time.time()
+        start_time = now - window
+        try:
+            # 清理旧日志（可选负载优化）
+            cursor.execute('DELETE FROM request_logs WHERE timestamp < ?', (now - 3600,)) 
+            
+            cursor.execute('''
+                SELECT COUNT(*) FROM request_logs 
+                WHERE ip_address = ? AND endpoint = ? AND timestamp > ?
+            ''', (ip, endpoint, start_time))
+            count = cursor.fetchone()[0]
+            
+            if count >= limit:
+                return False
+            
+            self.log_request(ip, endpoint)
+            conn.commit()
+            return True
         finally:
             conn.close()
