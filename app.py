@@ -132,6 +132,78 @@ def logout():
 def index():
     return render_template('index.html')
 
+# ========== 卡密管理 ==========
+
+@app.route('/cdkeys')
+@login_required
+def cdkeys_page():
+    """卡密管理页面"""
+    return render_template('cdkeys.html')
+
+@app.route('/api/cdkeys', methods=['GET'])
+@login_required
+def get_cdkeys():
+    """获取所有卡密"""
+    db = Database(DB_PATH)
+    cdkeys = db.get_all_cdkeys()
+    stats = db.get_cdkey_stats()
+    
+    return jsonify({
+        "cdkeys": [
+            {
+                "id": row[0],
+                "code": row[1],
+                "is_used": bool(row[2]),
+                "used_at": row[3],
+                "used_by_ip": row[4],
+                "created_at": row[5]
+            }
+            for row in cdkeys
+        ],
+        "stats": stats
+    })
+
+@app.route('/api/cdkeys/generate', methods=['POST'])
+@login_required
+def generate_cdkeys():
+    """生成卡密"""
+    data = request.json or {}
+    count = min(int(data.get('count', 1)), 100)  # 最多一次生成100个
+    length = int(data.get('length', 16))
+    
+    db = Database(DB_PATH)
+    generated = db.generate_cdkeys(count=count, length=length)
+    
+    return jsonify({
+        "success": True,
+        "generated": generated,
+        "count": len(generated)
+    })
+
+@app.route('/api/cdkeys/<int:cdkey_id>', methods=['DELETE'])
+@login_required
+def delete_cdkey(cdkey_id):
+    """删除卡密"""
+    db = Database(DB_PATH)
+    deleted = db.delete_cdkey(cdkey_id)
+    
+    return jsonify({"success": deleted})
+
+@app.route('/api/cdkeys/validate', methods=['POST'])
+def validate_cdkey():
+    """验证卡密（公开接口，用于登录验证）"""
+    data = request.json or {}
+    code = data.get('code', '').strip().upper()
+    
+    if not code:
+        return jsonify({"valid": False, "message": "请输入卡密"})
+    
+    db = Database(DB_PATH)
+    valid, message = db.validate_cdkey(code)
+    
+    return jsonify({"valid": valid, "message": message})
+
+
 @app.route('/api/batch_register', methods=['POST'])
 @login_required
 def batch_register():

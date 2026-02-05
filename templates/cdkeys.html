@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡密管理 - Cpolar 批量注册工具</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        .cdkey-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .cdkey-controls input[type="number"] {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .stats-row {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .stat-card .label {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .cdkey-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .cdkey-table th,
+        .cdkey-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .cdkey-table th {
+            background: rgba(255,255,255,0.05);
+            font-weight: 600;
+        }
+        
+        .cdkey-code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            background: rgba(0,0,0,0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .cdkey-code:hover {
+            background: rgba(0,0,0,0.5);
+        }
+        
+        .status-used {
+            color: #ff6b6b;
+        }
+        
+        .status-unused {
+            color: #51cf66;
+        }
+        
+        .btn-small {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-danger {
+            background: rgba(255,107,107,0.2);
+            color: #ff6b6b;
+        }
+        
+        .btn-danger:hover {
+            background: rgba(255,107,107,0.4);
+        }
+        
+        .btn-copy {
+            background: rgba(81,207,102,0.2);
+            color: #51cf66;
+        }
+        
+        .btn-copy:hover {
+            background: rgba(81,207,102,0.4);
+        }
+        
+        .nav-links {
+            margin-bottom: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: var(--accent);
+            text-decoration: none;
+            margin-right: 1rem;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(81,207,102,0.9);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>卡密 <span class="accent">管理</span></h1>
+            <p class="subtitle">生成和管理验证卡密</p>
+        </header>
+
+        <nav class="nav-links">
+            <a href="/">← 返回首页</a>
+            <a href="/logout">退出登录</a>
+        </nav>
+
+        <main class="glass-card">
+            <!-- 统计信息 -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="number" id="statTotal">0</div>
+                    <div class="label">总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statUnused">0</div>
+                    <div class="label">未使用</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statUsed">0</div>
+                    <div class="label">已使用</div>
+                </div>
+            </div>
+
+            <!-- 生成控制 -->
+            <div class="cdkey-controls">
+                <label>生成数量:</label>
+                <input type="number" id="generateCount" value="10" min="1" max="100">
+                <label>长度:</label>
+                <input type="number" id="generateLength" value="16" min="8" max="32">
+                <button class="primary-btn" onclick="generateCdkeys()">生成卡密</button>
+                <button class="secondary-btn" onclick="loadCdkeys()">刷新</button>
+            </div>
+
+            <!-- 卡密列表 -->
+            <div id="cdkeyList">
+                <div class="empty-state">加载中...</div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Cpolar Automation Suite</p>
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 显示提示
+        function showToast(message, duration = 2000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), duration);
+        }
+
+        // 复制到剪贴板
+        function copyCode(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                showToast('已复制: ' + code);
+            });
+        }
+
+        // 加载卡密列表
+        async function loadCdkeys() {
+            try {
+                const response = await fetch('/api/cdkeys');
+                const data = await response.json();
+                
+                // 更新统计
+                document.getElementById('statTotal').textContent = data.stats.total;
+                document.getElementById('statUnused').textContent = data.stats.unused;
+                document.getElementById('statUsed').textContent = data.stats.used;
+                
+                // 渲染表格
+                const container = document.getElementById('cdkeyList');
+                
+                if (data.cdkeys.length === 0) {
+                    container.innerHTML = '<div class="empty-state">暂无卡密，请点击"生成卡密"创建</div>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="cdkey-table">
+                        <thead>
+                            <tr>
+                                <th>卡密</th>
+                                <th>状态</th>
+                                <th>使用时间</th>
+                                <th>使用IP</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                for (const cdkey of data.cdkeys) {
+                    const statusClass = cdkey.is_used ? 'status-used' : 'status-unused';
+                    const statusText = cdkey.is_used ? '已使用' : '未使用';
+                    
+                    html += `
+                        <tr>
+                            <td>
+                                <span class="cdkey-code" onclick="copyCode('${cdkey.code}')" title="点击复制">
+                                    ${cdkey.code}
+                                </span>
+                            </td>
+                            <td class="${statusClass}">${statusText}</td>
+                            <td>${cdkey.used_at || '-'}</td>
+                            <td>${cdkey.used_by_ip || '-'}</td>
+                            <td>${cdkey.created_at}</td>
+                            <td>
+                                <button class="btn-small btn-copy" onclick="copyCode('${cdkey.code}')">复制</button>
+                                <button class="btn-small btn-danger" onclick="deleteCdkey(${cdkey.id})">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载卡密失败:', error);
+                document.getElementById('cdkeyList').innerHTML = 
+                    '<div class="empty-state">加载失败，请刷新重试</div>';
+            }
+        }
+
+        // 生成卡密
+        async function generateCdkeys() {
+            const count = parseInt(document.getElementById('generateCount').value) || 10;
+            const length = parseInt(document.getElementById('generateLength').value) || 16;
+            
+            try {
+                const response = await fetch('/api/cdkeys/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count, length })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`成功生成 ${data.count} 个卡密`);
+                    loadCdkeys();
+                } else {
+                    showToast('生成失败');
+                }
+            } catch (error) {
+                console.error('生成卡密失败:', error);
+                showToast('生成失败');
+            }
+        }
+
+        // 删除卡密
+        async function deleteCdkey(id) {
+            if (!confirm('确定要删除这个卡密吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/cdkeys/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('删除成功');
+                    loadCdkeys();
+                } else {
+                    showToast('删除失败');
+                }
+            } catch (error) {
+                console.error('删除卡密失败:', error);
+                showToast('删除失败');
+            }
+        }
+
+        // 页面加载时获取数据
+        document.addEventListener('DOMContentLoaded', loadCdkeys);
+    </script>
+</body>
+
+</html>

@@ -34,6 +34,18 @@ class Database:
                     created_at TEXT NOT NULL
                 )
             ''')
+            
+            # 卡密表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cdkeys (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code TEXT NOT NULL UNIQUE,
+                    is_used INTEGER DEFAULT 0,
+                    used_at TEXT,
+                    used_by_ip TEXT,
+                    created_at TEXT NOT NULL
+                )
+            ''')
 
             cursor.execute("PRAGMA table_info(accounts)")
             columns = [column[1] for column in cursor.fetchall()]
@@ -237,3 +249,129 @@ class Database:
             return False, str(e)
         finally:
             conn.close()
+
+    # ========== 卡密管理功能 ==========
+    
+    def generate_cdkeys(self, count=1, length=16):
+        """批量生成卡密"""
+        import secrets
+        import string
+        
+        generated = []
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            for _ in range(count):
+                # 生成随机卡密 (大写字母+数字)
+                chars = string.ascii_uppercase + string.digits
+                code = ''.join(secrets.choice(chars) for _ in range(length))
+                
+                try:
+                    cursor.execute('''
+                        INSERT INTO cdkeys (code, created_at)
+                        VALUES (?, ?)
+                    ''', (code, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    generated.append(code)
+                except sqlite3.IntegrityError:
+                    # 如果卡密重复，跳过
+                    continue
+            
+            conn.commit()
+            return generated
+        except Exception as e:
+            self.error_logger.log_error(
+                error_type="GenerateCdkeyError",
+                error_message=str(e),
+                module_name=__name__,
+                function_name="generate_cdkeys",
+                error_traceback=traceback.format_exc()
+            )
+            return []
+        finally:
+            conn.close()
+    
+    def get_all_cdkeys(self):
+        """获取所有卡密"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, code, is_used, used_at, used_by_ip, created_at
+            FROM cdkeys
+            ORDER BY created_at DESC
+        ''')
+        
+        cdkeys = cursor.fetchall()
+        conn.close()
+        return cdkeys
+    
+    def validate_cdkey(self, code):
+        """验证卡密是否有效（存在且未使用）"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, code, is_used FROM cdkeys WHERE code = ?
+        ''', (code,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return False, "卡密不存在"
+        if result[2] == 1:
+            return False, "卡密已被使用"
+        return True, "卡密有效"
+    
+    def use_cdkey(self, code, ip_address=None):
+        """使用卡密（标记为已使用）"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                UPDATE cdkeys 
+                SET is_used = 1, used_at = ?, used_by_ip = ?
+                WHERE code = ? AND is_used = 0
+            ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ip_address, code))
+            
+            conn.commit()
+            success = cursor.rowcount > 0
+            return success
+        except Exception as e:
+            return False
+        finally:
+            conn.close()
+    
+    def delete_cdkey(self, cdkey_id):
+        """删除卡密"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('DELETE FROM cdkeys WHERE id = ?', (cdkey_id,))
+        conn.commit()
+        deleted = cursor.rowcount > 0
+        conn.close()
+        return deleted
+    
+    def get_cdkey_stats(self):
+        """获取卡密统计"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT COUNT(*) FROM cdkeys')
+        total = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM cdkeys WHERE is_used = 1')
+        used = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM cdkeys WHERE is_used = 0')
+        unused = cursor.fetchone()[0]
+        
+        conn.close()
+        return {
+            'total': total,
+            'used': used,
+            'unused': unused
+        }
