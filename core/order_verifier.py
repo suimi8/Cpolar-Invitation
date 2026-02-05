@@ -5,11 +5,6 @@ import time
 import os
 import base64
 from datetime import datetime
-try:
-    import ddddocr
-except Exception as e:
-    print(f"ddddocr 导入失败: {e} - 自动填码功能将不可用")
-    ddddocr = None
 
 class OrderVerifier:
     def __init__(self, db_path):
@@ -71,21 +66,37 @@ class OrderVerifier:
         return None
 
     def _solve_captcha(self, captcha_data):
-        """识别验证码"""
+        """识别验证码 - 使用 jfbym 接口"""
         try:
-            if not ddddocr:
-                print("未安装 ddddocr，无法自动识别验证码")
-                return None
+            img_base64_str = captcha_data.get('image', '')
+            if img_base64_str.startswith('data:image'):
+                img_base64_str = img_base64_str.split(',')[1]
                 
-            img_base64 = captcha_data.get('image', '')
-            if img_base64.startswith('data:image'):
-                img_base64 = img_base64.split(',')[1]
-                
-            img_bytes = base64.b64decode(img_base64)
-            ocr = ddddocr.DdddOcr(show_ad=False)
-            res = ocr.classification(img_bytes)
-            print(f"验证码识别结果: {res}")
-            return res
+            url = "http://api.jfbym.com/api/YmServer/customApi"
+            # 这里的Token是打码平台的token，不是易店的
+            token = os.environ.get("JFBYM_TOKEN", "uY4IggQrYvMpObnzBSN2R7cVk1dKCThoRemlmJUA7eY")
+            
+            data = {
+                "token": token,
+                "type": "10110",
+                "image": img_base64_str,
+            }
+            _headers = {
+                "Content-Type": "application/json"
+            }
+            # 设置短超时防止打码平台卡死
+            resp = requests.post(url, headers=_headers, json=data, timeout=15)
+            response = resp.json()
+            print(f"打码平台响应: {response}")
+            
+            # 根据云码文档逻辑，通常 success=1 或 code=10000 代表成功，data/data.code 为结果
+            if str(response.get('code')) == '10000':
+                verify_code = response.get('data', {}).get('data')
+                return verify_code
+            else:
+                 print(f"打码失败: {response.get('msg')}")
+                 return None
+                 
         except Exception as e:
             print(f"验证码识别出错: {e}")
             return None
@@ -107,7 +118,7 @@ class OrderVerifier:
             print("获取验证码失败")
             return None
         
-        # 2. 识别验证码
+        # 2. 识别验证码 - 现在使用打码平台
         captcha_code = self._solve_captcha(captcha_info)
         if not captcha_code:
             print("验证码识别失败")
