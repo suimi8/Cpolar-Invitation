@@ -6,6 +6,7 @@ import json
 import time
 import traceback
 import threading
+from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 print("=== Flask 应用初始化开始 ===")
@@ -135,7 +136,6 @@ def login_required(f):
 
 def admin_required(f):
     """管理员权限验证装饰器"""
-    from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
