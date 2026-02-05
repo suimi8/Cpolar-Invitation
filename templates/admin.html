@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡密管理 - Cpolar 批量注册工具</title>
+    <title>后台管理 - Cpolar 批量注册工具</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap"
@@ -17,81 +17,81 @@
             flex-wrap: wrap;
             align-items: center;
         }
-        
+
         .cdkey-controls input[type="number"] {
             width: 80px;
             padding: 0.5rem;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
         }
-        
+
         .stats-row {
             display: flex;
             gap: 2rem;
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
         }
-        
+
         .stat-card {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             padding: 1rem 1.5rem;
             border-radius: 12px;
             text-align: center;
         }
-        
+
         .stat-card .number {
             font-size: 2rem;
             font-weight: 600;
             color: var(--accent);
         }
-        
+
         .stat-card .label {
             font-size: 0.875rem;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
         }
-        
+
         .cdkey-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
         }
-        
+
         .cdkey-table th,
         .cdkey-table td {
             padding: 0.75rem;
             text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .cdkey-table th {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             font-weight: 600;
         }
-        
+
         .cdkey-code {
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
             padding: 0.25rem 0.5rem;
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s;
         }
-        
+
         .cdkey-code:hover {
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
         }
-        
+
         .status-used {
             color: #ff6b6b;
         }
-        
+
         .status-unused {
             color: #51cf66;
         }
-        
+
         .btn-small {
             padding: 0.25rem 0.75rem;
             font-size: 0.8rem;
@@ -100,44 +100,44 @@
             border: none;
             transition: all 0.2s;
         }
-        
+
         .btn-danger {
-            background: rgba(255,107,107,0.2);
+            background: rgba(255, 107, 107, 0.2);
             color: #ff6b6b;
         }
-        
+
         .btn-danger:hover {
-            background: rgba(255,107,107,0.4);
+            background: rgba(255, 107, 107, 0.4);
         }
-        
+
         .btn-copy {
-            background: rgba(81,207,102,0.2);
+            background: rgba(81, 207, 102, 0.2);
             color: #51cf66;
         }
-        
+
         .btn-copy:hover {
-            background: rgba(81,207,102,0.4);
+            background: rgba(81, 207, 102, 0.4);
         }
-        
+
         .nav-links {
             margin-bottom: 1.5rem;
         }
-        
+
         .nav-links a {
             color: var(--accent);
             text-decoration: none;
             margin-right: 1rem;
         }
-        
+
         .nav-links a:hover {
             text-decoration: underline;
         }
-        
+
         .toast {
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            background: rgba(81,207,102,0.9);
+            background: rgba(81, 207, 102, 0.9);
             color: white;
             padding: 1rem 1.5rem;
             border-radius: 8px;
@@ -145,15 +145,15 @@
             transition: opacity 0.3s;
             z-index: 1000;
         }
-        
+
         .toast.show {
             opacity: 1;
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 3rem;
-            color: rgba(255,255,255,0.5);
+            color: rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
@@ -167,8 +167,8 @@
 
     <div class="container">
         <header>
-            <h1>卡密 <span class="accent">管理</span></h1>
-            <p class="subtitle">生成和管理验证卡密</p>
+            <h1>Cpolar <span class="accent">后台管理</span></h1>
+            <p class="subtitle">管理验证卡密与系统状态</p>
         </header>
 
         <nav class="nav-links">
@@ -237,20 +237,20 @@
             try {
                 const response = await fetch('/api/cdkeys');
                 const data = await response.json();
-                
+
                 // 更新统计
                 document.getElementById('statTotal').textContent = data.stats.total;
                 document.getElementById('statUnused').textContent = data.stats.unused;
                 document.getElementById('statUsed').textContent = data.stats.used;
-                
+
                 // 渲染表格
                 const container = document.getElementById('cdkeyList');
-                
+
                 if (data.cdkeys.length === 0) {
                     container.innerHTML = '<div class="empty-state">暂无卡密，请点击"生成卡密"创建</div>';
                     return;
                 }
-                
+
                 let html = `
                     <table class="cdkey-table">
                         <thead>
@@ -265,11 +265,11 @@
                         </thead>
                         <tbody>
                 `;
-                
+
                 for (const cdkey of data.cdkeys) {
                     const statusClass = cdkey.is_used ? 'status-used' : 'status-unused';
                     const statusText = cdkey.is_used ? '已使用' : '未使用';
-                    
+
                     html += `
                         <tr>
                             <td>
@@ -288,13 +288,13 @@
                         </tr>
                     `;
                 }
-                
+
                 html += '</tbody></table>';
                 container.innerHTML = html;
-                
+
             } catch (error) {
                 console.error('加载卡密失败:', error);
-                document.getElementById('cdkeyList').innerHTML = 
+                document.getElementById('cdkeyList').innerHTML =
                     '<div class="empty-state">加载失败，请刷新重试</div>';
             }
         }
@@ -303,16 +303,16 @@
         async function generateCdkeys() {
             const count = parseInt(document.getElementById('generateCount').value) || 10;
             const length = parseInt(document.getElementById('generateLength').value) || 16;
-            
+
             try {
                 const response = await fetch('/api/cdkeys/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ count, length })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showToast(`成功生成 ${data.count} 个卡密`);
                     loadCdkeys();
@@ -328,14 +328,14 @@
         // 删除卡密
         async function deleteCdkey(id) {
             if (!confirm('确定要删除这个卡密吗？')) return;
-            
+
             try {
                 const response = await fetch(`/api/cdkeys/${id}`, {
                     method: 'DELETE'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showToast('删除成功');
                     loadCdkeys();

@@ -1,8 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('startBtn');
     const inviteCodeInput = document.getElementById('inviteCode');
-    const countInput = document.getElementById('count');
-    const threadsInput = document.getElementById('threads');
+    const cdkeyInput = document.getElementById('cdkey');
     const statusPanel = document.getElementById('statusPanel');
     const logContent = document.getElementById('logContent');
     const progressFill = document.getElementById('progressFill');
@@ -28,31 +27,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startBtn.addEventListener('click', async () => {
         const inviteCode = inviteCodeInput.value.trim();
-        const count = parseInt(countInput.value);
-        const threads = parseInt(threadsInput.value);
+        const cdkey = cdkeyInput.value.trim();
 
         if (!inviteCode) {
             addLog('错误: 请提供邀请码', 'error');
             return;
         }
 
+        if (!cdkey) {
+            addLog('错误: 请输入验证卡密', 'error');
+            return;
+        }
+
         // Reset UI
         statusPanel.style.display = 'block';
         startBtn.disabled = true;
-        startBtn.innerText = '正在注册...';
+        startBtn.innerText = '正在验证卡密并运行...';
         progressFill.style.width = '0%';
         progressText.innerText = '准备中...';
         percentageText.innerText = '0%';
         completedNum.innerText = '0';
         successNum.innerText = '0';
         logContent.innerHTML = '';
-        addLog('开始执行批量注册任务...', 'system');
+        addLog('正在提交卡密验证...', 'system');
 
         try {
             const response = await fetch('/api/batch_register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invite_code: inviteCode, count, threads })
+                body: JSON.stringify({ invite_code: inviteCode, cdkey: cdkey })
             });
 
             if (!response.ok) {
@@ -85,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`请求失败: ${error.message}`, 'error');
         } finally {
             startBtn.disabled = false;
-            startBtn.innerText = '开始批量注册';
+            startBtn.innerText = '验证卡密并开始注册';
         }
     });
 

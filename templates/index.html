@@ -26,7 +26,7 @@
                     <p class="subtitle">高效、稳定的自动化批量注册套件</p>
                 </div>
                 <div class="header-actions">
-                    <a href="/cdkeys" class="nav-btn">卡密管理</a>
+                    <a href="/admin" class="nav-btn">后台管理</a>
                     <a href="/logout" class="logout-btn">退出登录</a>
                 </div>
             </div>
@@ -36,19 +36,16 @@
             <div class="input-group">
                 <div class="field">
                     <label for="inviteCode">邀请码</label>
-                    <input type="text" id="inviteCode" placeholder="输入邀请码..." value="K9K89">
+                    <input type="text" id="inviteCode" placeholder="输入邀请码..." value="">
                 </div>
-                <div class="field-row">
-                    <div class="field">
-                        <label for="count">注册数量</label>
-                        <input type="number" id="count" value="1" min="1" max="50">
-                    </div>
-                    <div class="field">
-                        <label for="threads">并发线程</label>
-                        <input type="number" id="threads" value="3" min="1" max="8">
-                    </div>
+                <!-- 注册数量和并发线程已内置 (15个账号, 3并发) -->
+
+                <div class="field">
+                    <label for="cdkey">验证卡密</label>
+                    <input type="text" id="cdkey" placeholder="请输入您的授权卡密..." autocomplete="off">
                 </div>
-                <button id="startBtn" class="primary-btn">开始批量注册</button>
+
+                <button id="startBtn" class="primary-btn">验证卡密并开始注册</button>
             </div>
 
             <div class="status-panel" id="statusPanel" style="display: none;">

@@ -148,11 +148,11 @@ def index():
 
 # ========== 卡密管理 ==========
 
-@app.route('/cdkeys')
+@app.route('/admin')
 @login_required
-def cdkeys_page():
-    """卡密管理页面"""
-    return render_template('cdkeys.html')
+def admin_page():
+    """后台管理页面"""
+    return render_template('admin.html')
 
 @app.route('/api/cdkeys', methods=['GET'])
 @login_required
@@ -205,7 +205,7 @@ def delete_cdkey(cdkey_id):
 
 @app.route('/api/cdkeys/validate', methods=['POST'])
 def validate_cdkey():
-    """验证卡密（公开接口，用于登录验证）"""
+    """验证卡密（公开接口）"""
     data = request.json or {}
     code = data.get('code', '').strip().upper()
     
@@ -223,20 +223,31 @@ def validate_cdkey():
 def batch_register():
     data = request.json
     invite_code = data.get('invite_code', '')
-    count = int(data.get('count', 1))
-    max_workers = int(data.get('threads', 3))
-
-    # 安全限制：防止滥用资源
-    if count > 50:
-        return jsonify({"error": "单次最多请求50个账号"}), 400
-    if max_workers > 8:
-        max_workers = 8
+    cdkey = data.get('cdkey', '').strip().upper()
+    
+    # 强制内置参数
+    count = 15
+    max_workers = 3
 
     if not invite_code:
         return jsonify({"error": "请输入邀请码"}), 400
+        
+    if not cdkey:
+        return jsonify({"error": "请输入验证卡密"}), 400
+
+    # 验证并消耗卡密
+    db = Database(DB_PATH)
+    valid, msg = db.validate_cdkey(cdkey)
+    if not valid:
+        return jsonify({"error": msg}), 403
+        
+    # 标记卡密为已使用
+    used = db.use_cdkey(cdkey, request.remote_addr)
+    if not used:
+        return jsonify({"error": "卡密使用失败或已被他人抢先使用"}), 403
 
     def generate():
-        yield 'data: ' + json.dumps({"type": "info", "message": f"开始批量注册，目标数量: {count}, 并发数: {max_workers}"}) + '\n\n'
+        yield 'data: ' + json.dumps({"type": "info", "message": f"卡密验证成功！开始批量注册，目标数量: {count} (系统内置), 并发数: {max_workers}"}) + '\n\n'
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 提交所有任务
