@@ -124,6 +124,8 @@
                     <button class="primary-btn" onclick="generateCdkeys()" style="width: auto;">生成卡密</button>
                     <button class="primary-btn" onclick="exportCdkeys()"
                         style="width: auto; background-color: var(--success);">导出TXT</button>
+                    <button class="primary-btn" onclick="cleanupCdkeys()"
+                        style="width: auto; background-color: var(--error);">清理已用</button>
                     <button class="secondary-btn" onclick="loadCdkeys()" style="width: auto;">刷新</button>
                 </div>
             </div>
@@ -269,6 +271,26 @@
             } catch (error) {
                 console.error('导出失败:', error);
                 showToast('导出失败');
+            }
+        }
+
+        // 清理已使用
+        async function cleanupCdkeys() {
+            if (!confirm('确定要删除所有【已使用】的卡密吗？此操作不可恢复。')) return;
+
+            try {
+                const response = await fetch('/api/cdkeys/cleanup', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`清理成功，共删除 ${data.count} 条记录`);
+                    loadCdkeys();
+                } else {
+                    showToast('清理失败: ' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('清理失败:', error);
+                showToast('清理失败');
             }
         }
 

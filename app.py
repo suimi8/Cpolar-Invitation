@@ -287,6 +287,18 @@ def generate_cdkeys():
         "count": len(generated)
     })
 
+@app.route('/api/cdkeys/cleanup', methods=['POST'])
+@admin_required
+def cleanup_cdkeys():
+    """清理所有已使用的卡密"""
+    db = Database(DB_PATH)
+    try:
+        count = db.cleanup_used_cdkeys()
+        return jsonify({"success": True, "count": count})
+    except Exception as e:
+        print(f"清理失败: {e}")
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route('/api/cdkeys/<int:cdkey_id>', methods=['DELETE'])
 @admin_required
 def delete_cdkey(cdkey_id):

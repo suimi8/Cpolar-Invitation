@@ -375,3 +375,18 @@ class Database:
             'used': used,
             'unused': unused
         }
+
+    def cleanup_used_cdkeys(self):
+        """清理所有已使用的卡密"""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('DELETE FROM cdkeys WHERE is_used = 1')
+            conn.commit()
+            count = cursor.rowcount
+            return count
+        except Exception:
+            return 0
+        finally:
+            conn.close()
