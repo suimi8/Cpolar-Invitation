@@ -1,0 +1,10 @@
+build:
+  type: pip
+  python: "3.11"
+
+start:
+  command: "gunicorn app:app --bind 0.0.0.0:8080 --workers 1 --timeout 120"
+
+ports:
+  - port: 8080
+    type: http
