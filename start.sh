@@ -3,8 +3,8 @@
 echo "Current PORT environment variable is: $PORT"
 echo "Starting Gunicorn..."
 
-# 如果 PORT 变量没设置，就默认 8080
-TARGET_PORT=${PORT:-8080}
+# 如果 PORT 变量没设置，就默认 3000
+TARGET_PORT=${PORT:-3000}
 
 # 启动 Gunicorn
 # 使用 gevent 模式以支持高并发
