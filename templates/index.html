@@ -26,7 +26,9 @@
                     <p class="subtitle">高效、稳定的自动化批量注册套件</p>
                 </div>
                 <div class="header-actions">
+                    {% if is_admin %}
                     <a href="/admin" class="nav-btn">后台管理</a>
+                    {% endif %}
                     <a href="/logout" class="logout-btn">退出登录</a>
                 </div>
             </div>

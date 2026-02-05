@@ -28,6 +28,15 @@ if not app.secret_key:
 SITE_PASSWORD = os.environ.get("SITE_PASSWORD")
 if not SITE_PASSWORD:
     raise ValueError("严重错误：未配置 SITE_PASSWORD 环境变量！")
+
+# 管理员密码（后台管理专用）：必须独立配置
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise ValueError("严重错误：未配置 ADMIN_PASSWORD 环境变量！请设置独立的后台管理密码。")
+
+# 确保管理员密码和普通密码不同
+if ADMIN_PASSWORD == SITE_PASSWORD:
+    print("警告：建议将 ADMIN_PASSWORD 设置为与 SITE_PASSWORD 不同的密码，以提高安全性。", file=sys.stderr)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 # 在 Zeabur 等云环境中，HTTP 请求可能会经过反向代理，需要信任头
 # 如果是生产环境 (FLASK_ENV=production 或类似变量)，可以设置为 Secure
@@ -73,6 +82,21 @@ def login_required(f):
             if request.path.startswith('/api/'):
                 return jsonify({"error": "未授权访问"}), 401
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    """管理员权限验证装饰器"""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        if not session.get('is_admin'):
+            # 如果是普通用户尝试访问后台 API，返回 JSON 错误；页面访问则返回 403 文本
+            if request.path.startswith('/api/'):
+                return jsonify({"error": "无权访问: 需要管理员权限"}), 403
+            return "无权访问: 需要管理员权限", 403
         return f(*args, **kwargs)
     return decorated_function
 
@@ -128,9 +152,18 @@ def register_single_task(index, invite_code):
 def login():
     if request.method == 'POST':
         password = request.form.get('password')
-        if password and password == SITE_PASSWORD:
+        
+        # 验证密码
+        if password == ADMIN_PASSWORD:
             session['logged_in'] = True
+            session['is_admin'] = True  # 管理员权限
             return redirect(url_for('index'))
+            
+        elif password == SITE_PASSWORD:
+            session['logged_in'] = True
+            session['is_admin'] = False # 普通用户
+            return redirect(url_for('index'))
+            
         return render_template('login.html', error="密码错误，请重试")
         
     return render_template('login.html')
@@ -138,24 +171,24 @@ def login():
 
 @app.route('/logout')
 def logout():
-    session.pop('logged_in', None)
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', is_admin=session.get('is_admin', False))
 
-# ========== 卡密管理 ==========
+# ========== 卡密管理 (Admin Only) ==========
 
 @app.route('/admin')
-@login_required
+@admin_required
 def admin_page():
     """后台管理页面"""
     return render_template('admin.html')
 
 @app.route('/api/cdkeys', methods=['GET'])
-@login_required
+@admin_required
 def get_cdkeys():
     """获取所有卡密"""
     db = Database(DB_PATH)
@@ -178,7 +211,7 @@ def get_cdkeys():
     })
 
 @app.route('/api/cdkeys/generate', methods=['POST'])
-@login_required
+@admin_required
 def generate_cdkeys():
     """生成卡密"""
     data = request.json or {}
@@ -195,7 +228,7 @@ def generate_cdkeys():
     })
 
 @app.route('/api/cdkeys/<int:cdkey_id>', methods=['DELETE'])
-@login_required
+@admin_required
 def delete_cdkey(cdkey_id):
     """删除卡密"""
     db = Database(DB_PATH)
