@@ -476,7 +476,7 @@ class Database:
     # --- 持久化限流机制 ---
 
     def log_request(self, ip, endpoint):
-        """记录请求日志"""
+        """记录请求日志（独立调用时使用）"""
         conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
         try:
@@ -487,7 +487,7 @@ class Database:
             conn.close()
 
     def check_rate_limit(self, ip, endpoint, limit=5, window=60):
-        """持久化频率限制检查"""
+        """持久化频率限制检查（修复并发锁问题）"""
         conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
         now = time.time()
@@ -503,10 +503,17 @@ class Database:
             count = cursor.fetchone()[0]
             
             if count >= limit:
+                conn.commit()  # 提交清理操作
                 return False
             
-            self.log_request(ip, endpoint)
+            # 直接在当前连接中插入日志（避免调用 log_request 创建新连接导致死锁）
+            cursor.execute('INSERT INTO request_logs (ip_address, endpoint, timestamp) VALUES (?, ?, ?)',
+                           (ip, endpoint, now))
             conn.commit()
+            return True
+        except sqlite3.OperationalError as e:
+            # 如果数据库锁定，允许请求通过但记录警告
+            print(f"[WARN] Rate limit check failed due to DB lock: {e}")
             return True
         finally:
             conn.close()
