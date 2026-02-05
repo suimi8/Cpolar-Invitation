@@ -14,7 +14,7 @@ class Database:
     def init_database(self):
         """初始化数据库"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, timeout=30)
             cursor = conn.cursor()
 
             cursor.execute('''
@@ -77,7 +77,7 @@ class Database:
 
     def add_account(self, account_info):
         """添加账号到数据库"""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
 
         try:
@@ -326,7 +326,7 @@ class Database:
     
     def use_cdkey(self, code, ip_address=None):
         """使用卡密（标记为已使用）"""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30)
         cursor = conn.cursor()
         
         try:
