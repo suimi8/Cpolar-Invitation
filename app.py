@@ -37,10 +37,57 @@ if not ADMIN_PASSWORD:
 # 确保管理员密码和普通密码不同
 if ADMIN_PASSWORD == SITE_PASSWORD:
     print("警告：建议将 ADMIN_PASSWORD 设置为与 SITE_PASSWORD 不同的密码，以提高安全性。", file=sys.stderr)
+
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-# 在 Zeabur 等云环境中，HTTP 请求可能会经过反向代理，需要信任头
-# 如果是生产环境 (FLASK_ENV=production 或类似变量)，可以设置为 Secure
-app.config['SESSION_COOKIE_SECURE'] = False  # 兼容 HTTP 访问，若全站 HTTPS 可设为 True
+# 生产环境强制开启 Secure Cookie (Zeabur 提供 HTTPS)
+app.config['SESSION_COOKIE_SECURE'] = True
+# 防止通过脚本访问 Cookie
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# ========== 简单的内存速率限制 (Rate Limiting) ==========
+# 格式: {ip: [timestamp1, timestamp2, ...]}
+RATE_LIMIT_STORAGE = {}
+RATE_LIMIT_LOCK = threading.Lock()
+
+def check_rate_limit(key, limit=5, window=60):
+    """
+    检查是否超过速率限制
+    :param key: 唯一标识（如IP）
+    :param limit: 时间窗口内的最大请求数
+    :param window: 时间窗口（秒）
+    :return: True if allowed, False if limited
+    """
+    now = time.time()
+    with RATE_LIMIT_LOCK:
+        if key not in RATE_LIMIT_STORAGE:
+            RATE_LIMIT_STORAGE[key] = []
+        
+        # 清理过期的记录
+        RATE_LIMIT_STORAGE[key] = [t for t in RATE_LIMIT_STORAGE[key] if now - t < window]
+        
+        # 检查是否超限
+        if len(RATE_LIMIT_STORAGE[key]) >= limit:
+            return False
+            
+        # 记录本次请求
+        RATE_LIMIT_STORAGE[key].append(now)
+        return True
+
+def cleanup_rate_limit():
+    """定期清理未使用的限流数据"""
+    while True:
+        time.sleep(300) # 每5分钟清理一次
+        now = time.time()
+        with RATE_LIMIT_LOCK:
+            keys_to_remove = []
+            for key, timestamps in RATE_LIMIT_STORAGE.items():
+                if not timestamps or (now - timestamps[-1] > 300):
+                    keys_to_remove.append(key)
+            for key in keys_to_remove:
+                del RATE_LIMIT_STORAGE[key]
+
+# 启动清理线程
+threading.Thread(target=cleanup_rate_limit, daemon=True).start()
 
 # 配置数据库路径
 # 优先使用环境变量 DATA_DIR (Zeabur 等平台常用挂载路径)，如果没有则默认为当前目录
@@ -151,6 +198,10 @@ def register_single_task(index, invite_code):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # 速率限制：防止暴力破解 (每分钟5次)
+        if not check_rate_limit(request.remote_addr, limit=5, window=60):
+            return render_template('login.html', error="尝试次数过多，请1分钟后再试"), 429
+
         password = request.form.get('password')
         
         # 验证密码
@@ -239,6 +290,10 @@ def delete_cdkey(cdkey_id):
 @app.route('/api/cdkeys/validate', methods=['POST'])
 def validate_cdkey():
     """验证卡密（公开接口）"""
+    # 速率限制：防止暴力穷举卡密 (每分钟10次)
+    if not check_rate_limit(request.remote_addr, limit=10, window=60):
+        return jsonify({"valid": False, "message": "请求过于频繁，请稍后再试"}), 429
+
     data = request.json or {}
     code = data.get('code', '').strip().upper()
     
