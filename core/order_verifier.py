@@ -7,7 +7,8 @@ import base64
 from datetime import datetime
 try:
     import ddddocr
-except ImportError:
+except Exception as e:
+    print(f"ddddocr 导入失败: {e} - 自动填码功能将不可用")
     ddddocr = None
 
 class OrderVerifier:
