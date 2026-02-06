@@ -180,6 +180,7 @@
             <button class="tab-btn active" onclick="switchTab('tab-cdkeys')">卡密管理</button>
             <button class="tab-btn" onclick="switchTab('tab-users')">邀请统计</button>
             <button class="tab-btn" onclick="switchTab('tab-security')">安全中心</button>
+            <button class="tab-btn" onclick="switchTab('tab-instructions')">使用说明</button>
         </nav>
 
         <main class="glass-card" style="padding: 2rem; min-height: 500px;">
@@ -293,6 +294,81 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Tab 4: 使用说明管理 -->
+            <div id="tab-instructions" class="tab-content">
+                <div class="section-header">
+                    <h2>使用说明管理</h2>
+                    <button class="primary-btn" onclick="showInstructionForm()" style="width: auto;">+ 发布新说明</button>
+                </div>
+
+                <!-- Form Section (Hidden by default) -->
+                <div id="instructionForm"
+                    style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+                    <h3 id="formTitle" style="margin-top: 0; margin-bottom: 1rem;">发布说明</h3>
+                    <input type="hidden" id="instId">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">标题</label>
+                            <input type="text" id="instTitle" class="form-input"
+                                style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">作者</label>
+                            <input type="text" id="instAuthor" class="form-input" value="Admin"
+                                style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">发布日期</label>
+                        <input type="date" id="instDate" class="form-input"
+                            style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.9rem;">正文内容 (支持占位符 [IMAGE: url])</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn-small success-btn" id="previewBtn" onclick="togglePreview()"
+                                    style="background: #e0e7ff; color: #4338ca;">实时预览</button>
+                                <button class="btn-small btn-copy" onclick="insertWebImage()">插入网络图片</button>
+                                <button class="btn-small btn-copy"
+                                    onclick="document.getElementById('imgUpload').click()">上传图片</button>
+                            </div>
+                            <input type="file" id="imgUpload" hidden accept="image/*" onchange="uploadImage(this)">
+                        </div>
+
+                        <!-- Editor & Preview Container -->
+                        <div style="position: relative;">
+                            <textarea id="instContent" rows="12" placeholder="输入说明内容...&#10;图片将独自占行显示。"
+                                style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; font-family: monospace; resize: vertical; line-height: 1.6;"></textarea>
+
+                            <div id="previewBox"
+                                style="display: none; width: 100%; min-height: 300px; padding: 1.5rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white; white-space: pre-wrap; word-break: break-all;">
+                                <!-- Preview content renders here -->
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.3rem;">
+                            提示: 图片会以 [IMAGE: url] 格式插入，预览模式下可查看实际效果。
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button class="secondary-btn" onclick="hideInstructionForm()" style="width: auto;">取消</button>
+                        <button class="primary-btn" onclick="saveInstruction()" style="width: auto;">保存发布</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div id="instructionList">
+                        <div style="padding: 3rem; text-align: center; color: var(--text-dim);">加载中...</div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <footer>
@@ -317,6 +393,7 @@
             if (tabId === 'tab-cdkeys') loadCdkeys();
             if (tabId === 'tab-users') loadAccounts();
             if (tabId === 'tab-security') loadBans();
+            if (tabId === 'tab-instructions') loadInstructions();
         }
 
         // Toast helper
@@ -573,6 +650,219 @@
                 const data = await res.json();
                 if (data.success) { showToast('已解除封禁'); loadBans(); }
             } catch (e) { showToast('解除封禁失败', true); }
+        }
+
+        // --- Instruction Management ---
+        let currentInstId = null;
+
+        async function loadInstructions() {
+            try {
+                const res = await fetch('/api/admin/instructions');
+                const data = await res.json();
+                const container = document.getElementById('instructionList');
+
+                if (!data.instructions || data.instructions.length === 0) {
+                    container.innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-dim);">暂无已发布说明</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="cdkey-table">
+                        <thead>
+                            <tr>
+                                <th>标题</th>
+                                <th>作者</th>
+                                <th>发布日期</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.instructions.forEach(inst => {
+                    html += `
+                        <tr>
+                            <td style="font-weight: 600;">${inst.title}</td>
+                            <td>${inst.author || '-'}</td>
+                            <td>${inst.publish_date || '-'}</td>
+                            <td style="font-size: 0.85rem; color: var(--text-dim);">${inst.created_at}</td>
+                            <td>
+                                <button class="btn-small btn-copy" onclick="editInstruction(${inst.id})">编辑</button>
+                                <button class="btn-small btn-danger" onclick="deleteInstruction(${inst.id})">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) { showToast('加载说明列表失败', true); }
+        }
+
+        function showInstructionForm() {
+            document.getElementById('instructionForm').style.display = 'block';
+            document.getElementById('formTitle').textContent = '发布新说明';
+            document.getElementById('instId').value = '';
+            document.getElementById('instTitle').value = '';
+            document.getElementById('instAuthor').value = 'Admin';
+            document.getElementById('instDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('instContent').value = '';
+            currentInstId = null;
+        }
+
+        function hideInstructionForm() {
+            document.getElementById('instructionForm').style.display = 'none';
+        }
+
+        async function saveInstruction() {
+            const title = document.getElementById('instTitle').value;
+            const author = document.getElementById('instAuthor').value;
+            const publish_date = document.getElementById('instDate').value;
+            const content = document.getElementById('instContent').value;
+
+            if (!title || !content) return showToast('标题和内容不能为空', true);
+
+            const method = currentInstId ? 'PUT' : 'POST';
+            const url = currentInstId ? `/api/admin/instructions/${currentInstId}` : '/api/admin/instructions';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, author, publish_date, content })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(currentInstId ? '更新成功' : '发布成功');
+                    hideInstructionForm();
+                    loadInstructions();
+                } else {
+                    showToast(data.message || '操作失败', true);
+                }
+            } catch (e) { showToast('保存失败', true); }
+        }
+
+        async function deleteInstruction(id) {
+            if (!confirm('确定删除此说明文档？')) return;
+            try {
+                const res = await fetch(`/api/admin/instructions/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) { showToast('删除成功'); loadInstructions(); }
+            } catch (e) { showToast('删除失败', true); }
+        }
+
+        async function editInstruction(id) {
+            try {
+                const res = await fetch(`/api/instructions/${id}`);
+                const data = await res.json();
+
+                showInstructionForm();
+                document.getElementById('formTitle').textContent = '编辑说明';
+                document.getElementById('instId').value = data.id;
+                document.getElementById('instTitle').value = data.title;
+                document.getElementById('instAuthor').value = data.author;
+                document.getElementById('instDate').value = data.publish_date;
+                document.getElementById('instContent').value = data.content;
+                currentInstId = data.id;
+
+                // Scroll to form
+                document.getElementById('instructionForm').scrollIntoView({ behavior: 'smooth' });
+            } catch (e) { showToast('加载详情失败', true); }
+        }
+
+        // --- Content Rendering Logic ---
+        function renderContent(text) {
+            if (!text) return '';
+
+            // Basic HTML escaping if we want to treat it as mixed content, but user wants "placeholders"
+            // For now, we trust the input somewhat as it is admin side, but let's be careful.
+            let html = text;
+
+            // Handle Image Placeholders: [IMAGE: url]
+            // Format: block div
+            const imgRegex = /\[IMAGE:\s*(.*?)\]/g;
+            html = html.replace(imgRegex, (match, url) => {
+                return `<div style="text-align: center; margin: 1.5rem 0;">
+                            <img src="${url.trim()}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block;">
+                        </div>`;
+            });
+
+            // Convert newlines to <br> for text parts
+            // This is a simple heuristic. Ideally we'd parse line by line.
+            html = html.replace(/\n/g, '<br>');
+
+            return html;
+        }
+
+        async function uploadImage(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.location) {
+                    insertPlaceholder(data.location.trim());
+                    showToast('图片上传成功');
+                } else {
+                    showToast(data.message || '上传失败', true);
+                }
+            } catch (e) { showToast('上传出错', true); }
+            input.value = ''; // Reset
+        }
+
+        function insertWebImage() {
+            const url = prompt("请输入网络图片地址 (URL):");
+            if (url) {
+                insertPlaceholder(url.trim());
+            }
+        }
+
+        function insertPlaceholder(url) {
+            const textarea = document.getElementById('instContent');
+            // Ensure strictly separate lines
+            const placeholder = `\n[IMAGE: ${url}]\n`;
+
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+
+            // Insert
+            textarea.value = textarea.value.substring(0, startPos) + placeholder + textarea.value.substring(endPos, textarea.value.length);
+
+            // Update preview if active
+            const previewBox = document.getElementById('previewBox');
+            if (previewBox && previewBox.style.display !== 'none') {
+                previewBox.innerHTML = renderContent(textarea.value);
+            }
+        }
+
+        function togglePreview() {
+            const editor = document.getElementById('instContent');
+            const preview = document.getElementById('previewBox');
+            const btn = document.getElementById('previewBtn');
+
+            if (preview.style.display === 'none') {
+                // Show Preview
+                preview.innerHTML = renderContent(editor.value);
+                preview.style.display = 'block';
+                editor.style.display = 'none';
+                btn.textContent = '返回编辑';
+                btn.style.background = '#f1f5f9';
+                btn.style.color = '#333';
+            } else {
+                // Show Editor
+                preview.style.display = 'none';
+                editor.style.display = 'block';
+                btn.textContent = '实时预览';
+                btn.style.background = ''; // reset to class default
+                btn.style.color = '';
+            }
         }
 
         // Init load

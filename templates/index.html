@@ -222,8 +222,92 @@
         </footer>
     </div>
 
+    <div id="instructionsSection" style="margin-top: 2rem; display: none;">
+        <h2 style="color: white; margin-bottom: 1rem; font-weight: 300;">使用说明</h2>
+        <div id="instructionList" style="display: grid; gap: 1.5rem;">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+
     <script src="/static/js/main.js"></script>
     <script src="/static/js/background.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const container = document.getElementById('instructionList');
+            const section = document.getElementById('instructionsSection');
+
+            try {
+                const res = await fetch('/api/instructions');
+                const data = await res.json();
+
+                if (data.instructions && data.instructions.length > 0) {
+                    section.style.display = 'block';
+
+                    data.instructions.forEach(async (inst) => {
+                        // Creating card for each instruction
+                        const card = document.createElement('div');
+                        card.className = 'glass-card';
+                        card.style.padding = '1.5rem';
+                        card.style.cursor = 'pointer';
+                        card.onclick = () => toggleInstruction(inst.id, card);
+
+                        card.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.2rem;">${inst.title}</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-dim);">
+                                    ${inst.author || 'Admin'} • ${inst.publish_date}
+                                </div>
+                            </div>
+                            <div id="content-${inst.id}" style="display: none; margin-top: 1.5rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 1rem; line-height: 1.6;">
+                                Loading...
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to load instructions", e);
+            }
+        });
+
+        async function toggleInstruction(id, card) {
+            const contentDiv = document.getElementById(`content-${id}`);
+            if (contentDiv.style.display === 'none') {
+                contentDiv.style.display = 'block';
+                // Load detail if not loaded
+                if (contentDiv.innerText === 'Loading...') {
+                    try {
+                        const res = await fetch(`/api/instructions/${id}`);
+                        const data = await res.json();
+                        if (data.content) {
+                            contentDiv.innerHTML = renderContent(data.content);
+                        }
+                    } catch (e) {
+                        contentDiv.innerText = '加载失败';
+                    }
+                }
+            } else {
+                contentDiv.style.display = 'none';
+            }
+        }
+
+        function renderContent(text) {
+            if (!text) return '';
+            let html = text;
+
+            // Handle Image Placeholders: [IMAGE: url]
+            const imgRegex = /\[IMAGE:\s*(.*?)\]/g;
+            html = html.replace(imgRegex, (match, url) => {
+                return `<div style="text-align: center; margin: 1.5rem 0;">
+                            <img src="${url.trim()}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block;">
+                        </div>`;
+            });
+
+            // Convert newlines to <br>
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+    </script>
 </body>
 
 </html>

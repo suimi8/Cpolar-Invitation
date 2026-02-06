@@ -85,6 +85,18 @@ class Database:
             if 'purchased_count' not in columns:
                 cursor.execute('ALTER TABLE accounts ADD COLUMN purchased_count INTEGER DEFAULT 0')
 
+            # 说明文档表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS instructions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    author TEXT,
+                    content TEXT NOT NULL,
+                    publish_date TEXT,
+                    created_at TEXT NOT NULL
+                )
+            ''')
+
             # 检查 cdkeys 表结构更新
             cursor.execute("PRAGMA table_info(cdkeys)")
             cdkey_columns = [column[1] for column in cursor.fetchall()]
@@ -522,5 +534,74 @@ class Database:
             # 如果数据库锁定，允许请求通过但记录警告
             print(f"[WARN] Rate limit check failed due to DB lock: {e}")
             return True
+        finally:
+            conn.close()
+
+    # ========== 使用说明管理功能 ==========
+
+    def add_instruction(self, title, author, content, publish_date=None):
+        """添加使用说明"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            if not publish_date:
+                publish_date = datetime.now().strftime('%Y-%m-%d')
+            
+            cursor.execute('''
+                INSERT INTO instructions (title, author, content, publish_date, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (title, author, content, publish_date, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            conn.commit()
+            return True, cursor.lastrowid
+        except Exception as e:
+            return False, str(e)
+        finally:
+            conn.close()
+
+    def get_all_instructions(self):
+        """获取所有使用说明"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT id, title, author, publish_date, created_at FROM instructions ORDER BY publish_date DESC, created_at DESC')
+            return cursor.fetchall()
+        finally:
+            conn.close()
+
+    def get_instruction(self, instruction_id):
+        """获取单个使用说明"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT id, title, author, content, publish_date, created_at FROM instructions WHERE id = ?', (instruction_id,))
+            return cursor.fetchone()
+        finally:
+            conn.close()
+
+    def update_instruction(self, instruction_id, title, author, content, publish_date):
+        """更新使用说明"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                UPDATE instructions 
+                SET title = ?, author = ?, content = ?, publish_date = ?
+                WHERE id = ?
+            ''', (title, author, content, publish_date, instruction_id))
+            conn.commit()
+            return cursor.rowcount > 0, None
+        except Exception as e:
+            return False, str(e)
+        finally:
+            conn.close()
+
+    def delete_instruction(self, instruction_id):
+        """删除使用说明"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('DELETE FROM instructions WHERE id = ?', (instruction_id,))
+            conn.commit()
+            return cursor.rowcount > 0
         finally:
             conn.close()

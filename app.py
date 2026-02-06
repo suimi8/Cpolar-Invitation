@@ -693,6 +693,115 @@ def export_cdkeys():
         headers={"Content-Disposition": "attachment;filename=unused_cdkeys.txt"}
     )
 
+# ========== 使用说明 & 图片上传 ==========
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+@app.route('/api/upload', methods=['POST'])
+@admin_required
+def upload_image():
+    if 'file' not in request.files:
+        return jsonify({"success": False, "message": "No file part"})
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"success": False, "message": "No selected file"})
+    if file:
+        from werkzeug.utils import secure_filename
+        filename = secure_filename(file.filename)
+        # Add timestamp to avoid duplicates
+        filename = f"{int(time.time())}_{filename}"
+        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        # TinyMCE expects 'location' for automatic image insertion
+        return jsonify({"location": f"/static/uploads/{filename}"})
+
+@app.route('/api/instructions', methods=['GET'])
+def get_instructions():
+    db = Database(DB_PATH)
+    instructions = db.get_all_instructions()
+    return jsonify({
+        "instructions": [
+            {
+                "id": row[0],
+                "title": row[1],
+                "author": row[2],
+                "publish_date": row[3],
+                "created_at": row[4]
+            } for row in instructions
+        ]
+    })
+
+@app.route('/api/instructions/<int:id>', methods=['GET'])
+def get_instruction_detail(id):
+    db = Database(DB_PATH)
+    row = db.get_instruction(id)
+    if row:
+        return jsonify({
+            "id": row[0],
+            "title": row[1],
+            "author": row[2],
+            "content": row[3],
+            "publish_date": row[4],
+            "created_at": row[5]
+        })
+    return jsonify({"error": "Not found"}), 404
+
+# Admin Management Routes for Instructions
+@app.route('/api/admin/instructions', methods=['GET'])
+@admin_required
+def admin_get_instructions():
+    db = Database(DB_PATH)
+    instructions = db.get_all_instructions()
+    return jsonify({
+        "instructions": [
+            {
+                "id": row[0],
+                "title": row[1],
+                "author": row[2],
+                "publish_date": row[3],
+                "created_at": row[4]
+            } for row in instructions
+        ]
+    })
+
+@app.route('/api/admin/instructions', methods=['POST'])
+@admin_required
+def add_instruction_route():
+    data = request.json or {}
+    title = data.get('title')
+    author = data.get('author')
+    content = data.get('content')
+    publish_date = data.get('publish_date')
+    
+    if not title or not content:
+        return jsonify({"success": False, "message": "Title and Content are required"})
+    
+    db = Database(DB_PATH)
+    success, result = db.add_instruction(title, author, content, publish_date)
+    
+    return jsonify({"success": success, "message": str(result) if not success else "Added"})
+
+@app.route('/api/admin/instructions/<int:id>', methods=['PUT'])
+@admin_required
+def update_instruction_route(id):
+    data = request.json or {}
+    title = data.get('title')
+    author = data.get('author')
+    content = data.get('content')
+    publish_date = data.get('publish_date')
+    
+    db = Database(DB_PATH)
+    success, msg = db.update_instruction(id, title, author, content, publish_date)
+    return jsonify({"success": success, "message": msg})
+
+@app.route('/api/admin/instructions/<int:id>', methods=['DELETE'])
+@admin_required
+def delete_instruction_route(id):
+    db = Database(DB_PATH)
+    success = db.delete_instruction(id)
+    return jsonify({"success": success})
+
 if __name__ == '__main__':
     # 安全加固：强制管理员密码和访问密码不同，否则拒绝启动
     if ADMIN_PASSWORD == SITE_PASSWORD:
