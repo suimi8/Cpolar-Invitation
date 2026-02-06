@@ -59,25 +59,50 @@ LOGIN_FAILED_ATTEMPTS = {} # {ip: count}
 CPOLAR_LOGIN_URL = os.environ.get("CPOLAR_LOGIN_URL", "https://dashboard.cpolar.com/login")
 CPOLAR_ENVOY_URL = os.environ.get("CPOLAR_ENVOY_URL", "https://dashboard.cpolar.com/envoy")
 
-# ========== 可信代理 IP 列表 (仅信任来自这些代理的 X-Forwarded-For) ==========
-# 生产环境应配置为 Zeabur/Nginx 等真实代理 IP 或 CIDR
+# ========== 可信代理 IP 配置 ==========
+# 支持三种模式:
+# 1. 指定 IP 列表: TRUSTED_PROXIES="10.0.0.1,10.0.0.2"
+# 2. 信任私有网络 (推荐用于 Zeabur/Railway 等云平台): TRUST_PRIVATE_NETWORKS=true
+# 3. 信任所有代理 (最后手段，不推荐): TRUST_ALL_PROXIES=true
 TRUSTED_PROXIES = set(
     filter(None, os.environ.get("TRUSTED_PROXIES", "127.0.0.1,::1").split(","))
 )
+TRUST_PRIVATE_NETWORKS = os.environ.get("TRUST_PRIVATE_NETWORKS", "true").lower() in ("true", "1", "yes")
+TRUST_ALL_PROXIES = os.environ.get("TRUST_ALL_PROXIES", "false").lower() in ("true", "1", "yes")
+
+def is_private_ip(ip):
+    """检查 IP 是否属于私有网络范围 (RFC 1918 / RFC 4193)"""
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(ip)
+        return addr.is_private or addr.is_loopback
+    except ValueError:
+        return False
 
 def get_real_ip():
     """
     安全获取真实 IP 地址
-    仅当请求直接来自可信代理时才信任 X-Forwarded-For
+    支持 Zeabur/Nginx 等反向代理环境
     """
-    # 获取直连 IP (来自 WSGI 的 remote_addr)
-    direct_ip = request.remote_addr
+    direct_ip = request.remote_addr or "127.0.0.1"
     
-    # 只有来自可信代理的请求，才读取 X-Forwarded-For
-    if direct_ip in TRUSTED_PROXIES:
+    # 判断是否信任当前直连 IP 作为代理
+    is_trusted = False
+    
+    if TRUST_ALL_PROXIES:
+        # 模式3: 信任所有代理 (不安全，仅用于调试)
+        is_trusted = True
+    elif direct_ip in TRUSTED_PROXIES:
+        # 模式1: 精确匹配可信代理列表
+        is_trusted = True
+    elif TRUST_PRIVATE_NETWORKS and is_private_ip(direct_ip):
+        # 模式2: 信任私有网络 (适用于 Zeabur/Railway 等云平台的内部网络)
+        is_trusted = True
+    
+    if is_trusted:
         xff = request.headers.get("X-Forwarded-For", "")
         if xff:
-            # 取第一个客户端 IP (最左侧)
+            # 取第一个客户端 IP (最左侧，由第一个代理添加)
             client_ip = xff.split(",")[0].strip()
             # 基本格式验证：防止恶意注入
             if re.match(r'^[\d.:a-fA-F]+$', client_ip):
