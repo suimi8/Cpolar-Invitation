@@ -107,7 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const res = data.last_result;
                 if (res.status === 'success') {
-                    addLog(`[√] #${res.index} ${res.email} - 注册并获取推广码成功`, 'success');
+                    let logMsg = `[√] #${res.index} ${res.email} - 注册并获取推广码成功`;
+                    if (res.plan_name && res.plan_name !== '未知') {
+                        logMsg += ` | 套餐: ${res.plan_name}`;
+                    }
+                    addLog(logMsg, 'success');
                 } else if (res.status === 'partial_success') {
                     addLog(`[!] #${res.index} ${res.email} - ${res.message}`, 'info');
                 } else {
@@ -115,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case 'finished':
-                addLog(`任务完成! 总计: ${data.total}, 成功: ${data.success}`, 'system');
+                addLog('任务完成!', 'system');
                 progressText.innerText = '任务已完成';
                 break;
         }

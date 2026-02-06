@@ -85,6 +85,13 @@ class Database:
             if 'purchased_count' not in columns:
                 cursor.execute('ALTER TABLE accounts ADD COLUMN purchased_count INTEGER DEFAULT 0')
 
+            # 检查 cdkeys 表结构更新
+            cursor.execute("PRAGMA table_info(cdkeys)")
+            cdkey_columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'used_by_ip' not in cdkey_columns:
+                cursor.execute('ALTER TABLE cdkeys ADD COLUMN used_by_ip TEXT')
+
             conn.commit()
             conn.close()
         except Exception as e:

@@ -203,14 +203,21 @@ def register_single_task(index, invite_code):
         account_info, error = register.register(invite_code)
         
         if account_info:
-            # 2. 登录获取推广码
-            promo_code, promo_error = login.login_and_get_promo(
+            # 2. 登录获取详细信息（推广码 + 套餐信息）
+            info, info_error = login.login_and_get_all_info(
                 account_info['email'],
                 account_info['password']
             )
 
-            if promo_code:
-                account_info['promo_code'] = promo_code
+            if info:
+                if 'promo_code' in info:
+                    account_info['promo_code'] = info['promo_code']
+                if 'plan_name' in info:
+                    account_info['plan_name'] = info['plan_name']
+                if 'plan_start_time' in info:
+                    account_info['plan_start_time'] = info['plan_start_time']
+                if 'plan_end_time' in info:
+                    account_info['plan_end_time'] = info['plan_end_time']
             
             # 不在线程中直接写库，而是返回数据给主线程处理
             # 避免 SQLite 锁问题
@@ -221,6 +228,9 @@ def register_single_task(index, invite_code):
                 "email": account_info['email'],
                 "password": account_info['password'],
                 "promo_code": account_info.get('promo_code', '获取失败'),
+                "plan_name": account_info.get('plan_name', '未知'),
+                "plan_start_time": account_info.get('plan_start_time', ''),
+                "plan_end_time": account_info.get('plan_end_time', ''),
                 "message": "注册成功",
                 "account_data": account_info # 传递完整数据以便保存
             }
@@ -604,7 +614,7 @@ def batch_register():
         return jsonify({"error": "卡密使用失败或已被他人抢先使用"}), 403
 
     def generate():
-        yield 'data: ' + json.dumps({"type": "info", "message": f"卡密验证成功！开始批量注册，目标数量: {count}, 并发数: {max_workers}"}) + '\n\n'
+        yield 'data: ' + json.dumps({"type": "info", "message": "卡密验证成功！开始批量注册"}) + '\n\n'
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 提交所有任务
