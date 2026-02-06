@@ -128,9 +128,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const doFetchCode = document.getElementById('doFetchCode');
     const cpolarEmail = document.getElementById('cpolarEmail');
     const cpolarPassword = document.getElementById('cpolarPassword');
+    const planInfoBox = document.getElementById('planInfoBox');
+    const planName = document.getElementById('planName');
+    const planStart = document.getElementById('planStart');
+    const planEnd = document.getElementById('planEnd');
 
     openFetchModal.addEventListener('click', () => {
         fetchModal.style.display = 'flex';
+        // 重置套餐信息显示
+        planInfoBox.style.display = 'none';
     });
 
     closeFetchModal.addEventListener('click', () => {
@@ -149,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalText = doFetchCode.innerText;
         doFetchCode.innerText = '正在获取...';
         doFetchCode.disabled = true;
+        planInfoBox.style.display = 'none';
 
         try {
             const res = await fetch('/api/get_cpolar_promo', {
@@ -159,9 +166,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (data.success) {
-                inviteCodeInput.value = data.promo_code;
-                fetchModal.style.display = 'none';
-                addLog(`成功自动获取推广码: ${data.promo_code}`, 'success');
+                // 显示推广码
+                if (data.promo_code) {
+                    inviteCodeInput.value = data.promo_code;
+                    addLog(`成功自动获取推广码: ${data.promo_code}`, 'success');
+                } else {
+                    addLog(data.promo_message || '未找到推广码', 'info');
+                }
+
+                // 显示套餐信息
+                if (data.plan && data.plan.name) {
+                    planName.innerText = data.plan.name.toUpperCase();
+                    planStart.innerText = data.plan.start_time || '-';
+                    planEnd.innerText = data.plan.end_time || '-';
+                    planInfoBox.style.display = 'block';
+                    addLog(`套餐: ${data.plan.name} (${data.plan.start_time} ~ ${data.plan.end_time})`, 'success');
+                }
+
+                // 如果有推广码才自动关闭
+                if (data.promo_code) {
+                    setTimeout(() => {
+                        fetchModal.style.display = 'none';
+                    }, 2000);
+                }
             } else {
                 alert(data.message || '获取失败，请重试');
             }

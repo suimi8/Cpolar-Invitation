@@ -136,10 +136,10 @@
 
             <!-- Cpolar Login Modal -->
             <div id="fetchModal" class="modal-overlay" style="display: none;">
-                <div class="glass-card modal-card" style="max-width: 400px; width: 90%; padding: 2rem;">
+                <div class="glass-card modal-card" style="max-width: 450px; width: 90%; padding: 2rem;">
                     <h3>获取 Cpolar 推广码</h3>
                     <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">
-                        请输入 Cpolar 官网账号密码，系统将自动登录并为您提取邀请码。
+                        请输入 Cpolar 官网账号密码，系统将自动登录并为您提取邀请码和套餐信息。
                     </p>
                     <div class="field" style="margin-bottom: 1rem;">
                         <label>Cpolar 账号 (邮箱)</label>
@@ -149,6 +149,32 @@
                         <label>Cpolar 密码</label>
                         <input type="password" id="cpolarPassword" placeholder="******">
                     </div>
+
+                    <!-- 套餐信息展示区 (初始隐藏) -->
+                    <div id="planInfoBox"
+                        style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 10px; border: 1px solid #86efac;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                            <span style="font-size: 1.2rem;">🎉</span>
+                            <span style="font-weight: 600; color: #166534;">套餐信息</span>
+                        </div>
+                        <div
+                            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; text-align: center;">
+                            <div>
+                                <div id="planName" style="font-size: 1.3rem; font-weight: 700; color: #15803d;">-</div>
+                                <div style="font-size: 0.75rem; color: #166534;">当前套餐</div>
+                            </div>
+                            <div>
+                                <div id="planStart" style="font-size: 0.85rem; font-weight: 500; color: #166534;">-
+                                </div>
+                                <div style="font-size: 0.75rem; color: #166534;">开始时间</div>
+                            </div>
+                            <div>
+                                <div id="planEnd" style="font-size: 0.85rem; font-weight: 500; color: #166534;">-</div>
+                                <div style="font-size: 0.75rem; color: #166534;">结束时间</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="display: flex; gap: 1rem;">
                         <button id="closeFetchModal" class="secondary-btn" style="width: auto; flex: 1;">取消</button>
                         <button id="doFetchCode" class="primary-btn" style="width: auto; flex: 2;">一键获取</button>

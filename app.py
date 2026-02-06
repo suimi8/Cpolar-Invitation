@@ -413,7 +413,7 @@ def delete_cdkey(cdkey_id):
 @app.route('/api/get_cpolar_promo', methods=['POST'])
 @login_required
 def get_cpolar_promo():
-    """自动化获取 Cpolar 推广码"""
+    """自动化获取 Cpolar 推广码和账户套餐信息"""
     data = request.json or {}
     email = data.get('email', '').strip()
     password = data.get('password', '')
@@ -430,10 +430,10 @@ def get_cpolar_promo():
         return jsonify({"success": False, "message": "密码长度应在 6-128 字符之间"})
     
     # 每次请求创建独立的 Session，确保并发时的会话隔离
-    session = requests.Session()
+    req_session = requests.Session()
     try:
         # 1. 获取登录页面提取 CSRF Token
-        login_res = session.get(CPOLAR_LOGIN_URL, timeout=10)
+        login_res = req_session.get(CPOLAR_LOGIN_URL, timeout=10)
         soup = BeautifulSoup(login_res.text, 'html.parser')
         csrf_input = soup.find('input', {'name': 'csrf_token'})
         if not csrf_input:
@@ -453,22 +453,72 @@ def get_cpolar_promo():
         }
         
         # 禁用重定向以检查是否登录成功 (302) 或 留在登录页 (200)
-        response = session.post(CPOLAR_LOGIN_URL, data=payload, headers=headers, timeout=15, allow_redirects=True)
+        response = req_session.post(CPOLAR_LOGIN_URL, data=payload, headers=headers, timeout=15, allow_redirects=True)
         
         # 如果还在登录页，说明密码错
         if "login" in response.url and response.status_code == 200:
             return jsonify({"success": False, "message": "Cpolar 登录失败：账号或密码错误"})
-            
+        
+        result = {"success": True}
+        
         # 3. 访问推广页获取代码
-        envoy_res = session.get(CPOLAR_ENVOY_URL, timeout=10)
+        envoy_res = req_session.get(CPOLAR_ENVOY_URL, timeout=10)
         
         # 使用正则提取 i.cpolar.com/m/XXXX
         match = re.search(r'i\.cpolar\.com/m/([A-Z0-9]+)', envoy_res.text)
         if match:
-            promo_code = match.group(1)
-            return jsonify({"success": True, "promo_code": promo_code})
+            result["promo_code"] = match.group(1)
         else:
-            return jsonify({"success": False, "message": "登录成功，但未在该页面找到推广码。请先在 Cpolar 官网确认您已获得推广链接。"})
+            result["promo_code"] = None
+            result["promo_message"] = "未找到推广码，请先在 Cpolar 官网确认您已获得推广链接"
+        
+        # 4. 访问 billing 页面获取套餐信息
+        try:
+            billing_url = os.environ.get("CPOLAR_BILLING_URL", "https://dashboard.cpolar.com/billing")
+            billing_res = req_session.get(billing_url, timeout=10)
+            billing_soup = BeautifulSoup(billing_res.text, 'html.parser')
+            
+            # 提取当前套餐名称 (从 <strong> 标签中)
+            plan_name = None
+            plan_strong = billing_soup.find('strong', style=lambda s: s and 'font-size' in s)
+            if plan_strong:
+                plan_name = plan_strong.get_text(strip=True)
+            
+            # 如果没找到，尝试从表格中提取
+            if not plan_name:
+                plan_row = billing_soup.find('th', scope='row')
+                if plan_row:
+                    plan_name = plan_row.get_text(strip=True)
+            
+            # 提取套餐开始和结束时间 (从表格中)
+            plan_start = None
+            plan_end = None
+            billing_table = billing_soup.find('table', class_='table')
+            if billing_table:
+                tbody = billing_table.find('tbody')
+                if tbody:
+                    tr = tbody.find('tr')
+                    if tr:
+                        tds = tr.find_all('td')
+                        if len(tds) >= 2:
+                            # 提取并清理时间格式 (去掉时区后缀)
+                            plan_start = tds[0].get_text(strip=True)
+                            plan_end = tds[1].get_text(strip=True)
+                            # 清理时间格式，移除 "+0800 CST" 等后缀
+                            plan_start = re.sub(r'\s*\+\d+\s*\w+$', '', plan_start)
+                            plan_end = re.sub(r'\s*\+\d+\s*\w+$', '', plan_end)
+            
+            result["plan"] = {
+                "name": plan_name,
+                "start_time": plan_start,
+                "end_time": plan_end
+            }
+            
+        except Exception as e:
+            print(f"获取套餐信息异常: {str(e)}")
+            result["plan"] = None
+            
+        return jsonify(result)
             
     except Exception as e:
         print(f"获取推广码异常: {str(e)}")
