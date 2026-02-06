@@ -2,7 +2,7 @@ import sqlite3
 import os
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from database.logger import ErrorLogger
 
 
@@ -133,7 +133,7 @@ class Database:
                 "********",  # 脱敏处理：不再存储真实密码
                 account_info['invite_code'],
                 account_info.get('promo_code', None),
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
             ))
             conn.commit()
             return True, None
@@ -299,7 +299,7 @@ class Database:
                     cursor.execute('''
                         INSERT INTO cdkeys (code, created_at)
                         VALUES (?, ?)
-                    ''', (code, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    ''', (code, (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')))
                     generated.append(code)
                 except sqlite3.IntegrityError:
                     # 如果卡密重复，跳过
@@ -362,7 +362,7 @@ class Database:
                 UPDATE cdkeys 
                 SET is_used = 1, used_at = ?, used_by_ip = ?
                 WHERE code = ? AND is_used = 0
-            ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ip_address, code))
+            ''', ((datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S'), ip_address, code))
             
             conn.commit()
             success = cursor.rowcount > 0
@@ -440,7 +440,7 @@ class Database:
             cursor.execute('''
                 INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at)
                 VALUES (?, ?, ?)
-            ''', (ip, reason, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            ''', (ip, reason, (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')))
             conn.commit()
             return True
         except Exception:
@@ -545,12 +545,12 @@ class Database:
         cursor = conn.cursor()
         try:
             if not publish_date:
-                publish_date = datetime.now().strftime('%Y-%m-%d')
+                publish_date = (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d')
             
             cursor.execute('''
                 INSERT INTO instructions (title, author, content, publish_date, created_at)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (title, author, content, publish_date, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            ''', (title, author, content, publish_date, (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')))
             conn.commit()
             return True, cursor.lastrowid
         except Exception as e:

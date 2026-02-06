@@ -11,6 +11,7 @@ import requests
 from bs4 import BeautifulSoup
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
 
 print("=== Flask 应用初始化开始 ===")
 print(f"=== 环境变量 PORT = {os.environ.get('PORT', '未设置')} ===")
@@ -159,7 +160,8 @@ print("=== 健康检查端点已注册 ===")
 # 启动心跳日志线程，证明服务活着
 def heartbeat_logger():
     while True:
-        print(f"[{time.strftime('%H:%M:%S')}] ✅ 服务运行正常 - Heartbeat - 内存/CPU状态良好", flush=True)
+        bj_time = (datetime.utcnow() + timedelta(hours=8)).strftime('%H:%M:%S')
+        print(f"[{bj_time}] ✅ 服务运行正常 - Heartbeat - 内存/CPU状态良好", flush=True)
         time.sleep(10)
 
 # 在非 Reload 模式下启动心跳 (简单防止 worker 重启导致多重打印，但在 Gunicorn worker 里每个 worker 都会启动一个)
