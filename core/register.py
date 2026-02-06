@@ -40,7 +40,7 @@ class CpolarRegister:
         url = f"{CPOLAR_SIGNUP_URL}?channel=0&inviteCode={quote(invite_code)}"
         
         try:
-            response = self.session.get(url, headers=self.headers, timeout=30)
+            response = self.session.get(url, headers=self.headers, timeout=10)
             response.raise_for_status()
             
             pattern = r'<input[^>]*name="csrf_token"[^>]*value="([^"]+)"'
@@ -98,7 +98,7 @@ class CpolarRegister:
                 register_url,
                 headers=post_headers,
                 data=post_data,
-                timeout=30,
+                timeout=10,
                 allow_redirects=True
             )
             

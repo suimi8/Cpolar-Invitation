@@ -25,7 +25,7 @@ class CpolarLogin:
     def get_csrf_token(self):
         """获取CSRF Token"""
         try:
-            response = self.session.get(CPOLAR_LOGIN_URL, timeout=30)
+            response = self.session.get(CPOLAR_LOGIN_URL, timeout=10)
             if response.status_code == 200:
                 match = re.search(r'name="csrf_token"\s+value="([^"]+)"', response.text)
                 if match:
@@ -85,7 +85,7 @@ class CpolarLogin:
                 "Origin": "https://dashboard.cpolar.com"
             }
 
-            response = self.session.post(login_url, data=data, headers=headers, allow_redirects=True, timeout=30)
+            response = self.session.post(login_url, data=data, headers=headers, allow_redirects=True, timeout=10)
 
             if response.status_code == 200:
                 if "login" not in response.url or "dashboard" in response.text:
@@ -153,7 +153,7 @@ class CpolarLogin:
         """
         try:
             # 访问推广页面
-            response = self.session.get(CPOLAR_ENVOY_URL)
+            response = self.session.get(CPOLAR_ENVOY_URL, timeout=10)
 
             if response.status_code == 200:
                 # 使用正则表达式提取推广码
@@ -193,7 +193,7 @@ class CpolarLogin:
         返回: (套餐信息字典, 错误信息)
         """
         try:
-            response = self.session.get(CPOLAR_BILLING_URL)
+            response = self.session.get(CPOLAR_BILLING_URL, timeout=10)
 
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -239,7 +239,7 @@ class CpolarLogin:
         返回: (统计信息字典, 错误信息)
         """
         try:
-            response = self.session.get(CPOLAR_ENVOY_URL)
+            response = self.session.get(CPOLAR_ENVOY_URL, timeout=10)
 
             if response.status_code == 200:
                 # 查找推广客户数

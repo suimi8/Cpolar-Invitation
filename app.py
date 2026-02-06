@@ -199,8 +199,24 @@ def register_single_task(index, invite_code):
         register = CpolarRegister()
         login = CpolarLogin()
 
-        # 1. 注册
-        account_info, error = register.register(invite_code)
+        # 1. 注册 (最多重试3次)
+        max_retries = 3
+        account_info = None
+        error = None
+        
+        for attempt in range(max_retries):
+            try:
+                account_info, error = register.register(invite_code)
+                if account_info:
+                    break
+                print(f"任务 #{index+1} 第 {attempt+1} 次注册失败: {error}")
+                if attempt < max_retries - 1:
+                    time.sleep(1) # 失败后稍作等待
+            except Exception as e:
+                print(f"任务 #{index+1} 第 {attempt+1} 次尝试异常: {e}")
+                error = str(e)
+                if attempt < max_retries - 1:
+                    time.sleep(1)
         
         if account_info:
             # 2. 登录获取详细信息（推广码 + 套餐信息）
